@@ -1,0 +1,17 @@
+{
+  "name": "foam5g",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@openzeppelin/contracts": "^3.2.0",
+    "ethjs-provider-http": "^0.1.6",
+    "solc": "^0.6",
+    "web3": "^1.3.0"
+  }
+}

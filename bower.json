@@ -1,0 +1,19 @@
+{
+  "name": "foam5g",
+  "license": "MIT",
+  "homepage": "",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "purescript-chanterelle": "^4.1.0"
+  },
+  "devDependencies": {
+    "purescript-spec": "^4.0.1"
+  }
+}

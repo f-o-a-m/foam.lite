@@ -1,0 +1,20 @@
+{
+  "name": "foam5g",
+  "version": "1.0.0",
+  "source-dir": "contracts/",
+  "modules": [
+    "FungibleToken",
+    "RelayableNFT"
+  ],
+  "dependencies": [
+    "@openzeppelin/contracts"
+  ],
+  "purescript-generator": {
+    "output-path": "src",
+    "module-prefix": "Contracts"
+  },
+  "solc-optimizer": {
+    "enabled": true,
+    "runs": 200
+  }
+}
