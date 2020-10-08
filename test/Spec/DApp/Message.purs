@@ -1,14 +1,11 @@
 module Spec.DApp.Message where
 
-import DApp.Message
 import Prelude
-
+import DApp.Message (DAppMessage, parseDAppMessage)
 import Data.Either (Either(..))
 import Data.Enum (enumFromTo)
 import Data.Foldable (for_)
-import Data.NonEmpty (NonEmpty(..))
 import Data.Tuple (Tuple(..))
-import Effect.Aff.Class (liftAff)
 import Effect.Class (class MonadEffect, liftEffect)
 import Random.LCG (randomSeed)
 import Test.QuickCheck.Arbitrary (arbitrary)

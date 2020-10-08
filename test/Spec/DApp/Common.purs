@@ -6,7 +6,7 @@ import Chanterelle.Test (TestConfig)
 import Data.Array as Array
 import Data.Maybe (Maybe(..), fromJust)
 import Data.Symbol (SProxy(..))
-import Network.Ethereum.Core.Signatures (Address, PrivateKey, PublicKey, mkPrivateKey, privateToAddress, privateToPublic, publicToAddress)
+import Network.Ethereum.Core.Signatures (PrivateKey, PublicKey, privateToPublic, publicToAddress)
 import Network.Ethereum.Web3 (Address, Provider)
 import Partial.Unsafe (unsafePartialBecause)
 import Prim.Row as Row
