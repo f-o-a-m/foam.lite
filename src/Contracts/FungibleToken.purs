@@ -60,6 +60,31 @@ instance eventGenericApprovaleq :: Eq Approval where
   eq = genericEq
 
 --------------------------------------------------------------------------------
+-- | OwnershipTransferred
+--------------------------------------------------------------------------------
+
+
+newtype OwnershipTransferred = OwnershipTransferred {previousOwner :: Address,newOwner :: Address}
+
+derive instance newtypeOwnershipTransferred :: Newtype OwnershipTransferred _
+
+instance eventFilterOwnershipTransferred :: EventFilter OwnershipTransferred where
+  eventFilter _ addr = defaultFilter
+    # _address .~ Just addr
+    # _topics .~ Just [Just ( unsafePartial $ fromJust $ mkHexString "8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0"),Nothing,Nothing]
+
+instance indexedEventOwnershipTransferred :: IndexedEvent (Tuple2 (Tagged (SProxy "previousOwner") Address) (Tagged (SProxy "newOwner") Address)) (Tuple0 ) OwnershipTransferred where
+  isAnonymous _ = false
+
+derive instance genericOwnershipTransferred :: Generic OwnershipTransferred _
+
+instance eventGenericOwnershipTransferredShow :: Show OwnershipTransferred where
+  show = genericShow
+
+instance eventGenericOwnershipTransferredeq :: Eq OwnershipTransferred where
+  eq = genericEq
+
+--------------------------------------------------------------------------------
 -- | Transfer
 --------------------------------------------------------------------------------
 
@@ -109,6 +134,19 @@ approve x0 r = uncurryFields  r $ approve' x0
    where
     approve' :: TransactionOptions NoPay -> (Tagged (SProxy "spender") Address) -> (Tagged (SProxy "amount") (UIntN (D2 :& D5 :& DOne D6))) -> Web3 HexString
     approve' y0 y1 y2 = sendTx y0 ((tagged $ Tuple2 y1 y2) :: ApproveFn)
+
+--------------------------------------------------------------------------------
+-- | ApproveForAnyoneFn
+--------------------------------------------------------------------------------
+
+
+type ApproveForAnyoneFn = Tagged (SProxy "approveForAnyone(address,address,uint256)") (Tuple3 (Tagged (SProxy "owner") Address) (Tagged (SProxy "spender") Address) (Tagged (SProxy "amount") (UIntN (D2 :& D5 :& DOne D6))))
+
+approveForAnyone :: TransactionOptions NoPay -> { owner :: Address, spender :: Address, amount :: (UIntN (D2 :& D5 :& DOne D6)) } -> Web3 HexString
+approveForAnyone x0 r = uncurryFields  r $ approveForAnyone' x0
+   where
+    approveForAnyone' :: TransactionOptions NoPay -> (Tagged (SProxy "owner") Address) -> (Tagged (SProxy "spender") Address) -> (Tagged (SProxy "amount") (UIntN (D2 :& D5 :& DOne D6))) -> Web3 HexString
+    approveForAnyone' y0 y1 y2 y3 = sendTx y0 ((tagged $ Tuple3 y1 y2 y3) :: ApproveForAnyoneFn)
 
 --------------------------------------------------------------------------------
 -- | BalanceOfFn
@@ -170,6 +208,26 @@ name :: TransactionOptions NoPay -> ChainCursor -> Web3 (Either CallError String
 name x0 cm = map unTuple1 <$> call x0 cm ((tagged $ Tuple0 ) :: NameFn)
 
 --------------------------------------------------------------------------------
+-- | OwnerFn
+--------------------------------------------------------------------------------
+
+
+type OwnerFn = Tagged (SProxy "owner()") (Tuple0 )
+
+owner :: TransactionOptions NoPay -> ChainCursor -> Web3 (Either CallError Address)
+owner x0 cm = map unTuple1 <$> call x0 cm ((tagged $ Tuple0 ) :: OwnerFn)
+
+--------------------------------------------------------------------------------
+-- | RenounceOwnershipFn
+--------------------------------------------------------------------------------
+
+
+type RenounceOwnershipFn = Tagged (SProxy "renounceOwnership()") (Tuple0 )
+
+renounceOwnership :: TransactionOptions NoPay -> Web3 HexString
+renounceOwnership x0 = sendTx x0 ((tagged $ Tuple0 ) :: RenounceOwnershipFn)
+
+--------------------------------------------------------------------------------
 -- | SymbolFn
 --------------------------------------------------------------------------------
 
@@ -214,3 +272,16 @@ transferFrom x0 r = uncurryFields  r $ transferFrom' x0
    where
     transferFrom' :: TransactionOptions NoPay -> (Tagged (SProxy "sender") Address) -> (Tagged (SProxy "recipient") Address) -> (Tagged (SProxy "amount") (UIntN (D2 :& D5 :& DOne D6))) -> Web3 HexString
     transferFrom' y0 y1 y2 y3 = sendTx y0 ((tagged $ Tuple3 y1 y2 y3) :: TransferFromFn)
+
+--------------------------------------------------------------------------------
+-- | TransferOwnershipFn
+--------------------------------------------------------------------------------
+
+
+type TransferOwnershipFn = Tagged (SProxy "transferOwnership(address)") (Tuple1 (Tagged (SProxy "newOwner") Address))
+
+transferOwnership :: TransactionOptions NoPay -> { newOwner :: Address } -> Web3 HexString
+transferOwnership x0 r = uncurryFields  r $ transferOwnership' x0
+   where
+    transferOwnership' :: TransactionOptions NoPay -> (Tagged (SProxy "newOwner") Address) -> Web3 HexString
+    transferOwnership' y0 y1 = sendTx y0 ((tagged $ Tuple1 y1) :: TransferOwnershipFn)

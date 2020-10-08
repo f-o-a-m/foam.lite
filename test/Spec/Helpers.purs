@@ -11,13 +11,16 @@ import Effect.Aff (Aff, Error)
 import Effect.Aff.AVar as AVar
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Effect.Exception (error)
-import Network.Ethereum.Web3 (class EventFilter, BigNumber, Change(..), EventAction(..), Filter, HexString, Provider, UIntN, Web3, embed, event, forkWeb3, runWeb3, uIntNFromBigNumber)
+import Network.Ethereum.Web3 (class EventFilter, Address, BigNumber, Change(..), EventAction(..), Filter, HexString, Provider, UIntN, Web3, embed, event, forkWeb3, mkAddress, mkHexString, runWeb3, uIntNFromBigNumber)
 import Network.Ethereum.Web3.Solidity (class DecodeEvent)
 import Network.Ethereum.Web3.Solidity.Size (class KnownSize, DLProxy(..))
 import Partial.Unsafe (unsafePartialBecause)
 
 bnZero :: BigNumber
 bnZero = embed 0
+
+zeroAddress :: Address
+zeroAddress = unsafePartialBecause "we can make the zero address manually" fromJust $ mkAddress =<< mkHexString "0x0000000000000000000000000000000000000000"
 
 forceUIntN :: forall len. KnownSize len => BigNumber -> UIntN len
 forceUIntN = unsafePartialBecause "we're knowingly forcing a BigNumber into a size UInt" fromJust <<< uIntNFromBigNumber (DLProxy :: DLProxy len)

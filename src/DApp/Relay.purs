@@ -3,15 +3,15 @@ module DApp.Relay
   , getRelayNonce
   , packSignature
   , mintRelayed
+  , transferRelayed
   , recoverRelayedMessageSignerWeb3
   , recoverRelayedTransferSignerWeb3
   ) where
 
-import DApp.Relay.Types
-import Prelude
-
+import Prelude (($), (<>))
 import Contracts.RelayableNFT as RNFT
 import DApp.Util (makeTxOpts)
+import DApp.Relay.Types
 import Data.ByteString as BS
 import Data.Either (Either)
 import Data.Symbol (SProxy(..))
@@ -52,3 +52,6 @@ mintRelayed :: SignedRelayedMessage -> TransactionOptions NoPay -> Web3 HexStrin
 mintRelayed (SignedRelayedMessage s) txOpts = do
   RNFT.mintRelayed txOpts { signature: packSignature s.signature, feeAmount: s.feeAmount, nonce: s.nonce, tokenURI: s.tokenURI }
   
+transferRelayed :: SignedRelayedTransfer -> TransactionOptions NoPay -> Web3 HexString
+transferRelayed (SignedRelayedTransfer s) txOpts = do
+  RNFT.transferRelayed txOpts { signature: packSignature s.signature, feeAmount: s.feeAmount, nonce: s.nonce, tokenID: s.tokenID, destination: s.destination }

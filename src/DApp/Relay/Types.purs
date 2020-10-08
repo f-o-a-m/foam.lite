@@ -3,7 +3,7 @@ module DApp.Relay.Types where
 import Prelude
 
 import Control.Monad.Error.Class (throwError)
-import Data.ByteString (ByteString, Encoding(Hex), fromString) as BS
+import Data.ByteString (ByteString, Encoding(Hex, UTF8), fromString, singleton) as BS
 import Data.Maybe (Maybe, fromJust, maybe)
 import Data.String as String
 import Data.Symbol (SProxy(..))
@@ -18,6 +18,7 @@ import Network.Ethereum.Web3.Solidity.AbiEncoding (uInt256HexBuilder)
 import Network.Ethereum.Web3.Solidity.Sizes (S32, S256)
 import Partial.Unsafe (unsafePartialBecause)
 import Record as Record
+import Type.Quotient (mkQuotient)
 
 type UnsignedRelayedMessageR r = (nonce :: UIntN S32, feeAmount :: UIntN S256, tokenURI :: String | r)
 type SignedRelayedMessageR r = UnsignedRelayedMessageR (signature :: Signature | r)
@@ -55,17 +56,24 @@ hashRelayedMessage = keccak256 <<< packRelayedMessage
 hashRelayedTransfer :: UnsignedRelayedTransfer -> BS.ByteString
 hashRelayedTransfer = keccak256 <<< packRelayedTransfer
 
+toEthSignedMessage :: BS.ByteString -> BS.ByteString
+toEthSignedMessage bs =
+  let pfx = unsafePartialBecause "we're packing a known good prefix into a bytestring" fromJust $ BS.fromString "Ethereum Signed Message:\n32" BS.UTF8
+   in (BS.singleton (mkQuotient 25)) <> pfx <> bs -- 25 = 0x19 (i.e \x19)
+
 -- todo: this probably needs to sign keccak256("\x19Ethereum Signed Message:\n32" + <hashRelayedMessage>) like personal_sign does...
 signRelayedMessage :: PrivateKey -> UnsignedRelayedMessage -> SignedRelayedMessage
 signRelayedMessage prk urm@(UnsignedRelayedMessage u) =
-  let signature = signMessage prk (hashRelayedMessage urm)
-      in SignedRelayedMessage (Record.insert (SProxy :: SProxy "signature") signature u)
+  let Signature signature = signMessage prk (keccak256 <<< toEthSignedMessage $ hashRelayedMessage urm)
+      fixedSignature = Signature { r: signature.r, s: signature.s, v: signature.v + 27 } -- ethereum sigs use v=27 or v=28 instead of 0/1
+      in SignedRelayedMessage (Record.insert (SProxy :: SProxy "signature") fixedSignature u)
 
 -- todo: this probably needs to sign keccak256("\x19Ethereum Signed Message:\n32" + <hashRelayedMessage>) like personal_sign does...
 signRelayedTransfer :: PrivateKey -> UnsignedRelayedTransfer -> SignedRelayedTransfer
 signRelayedTransfer prk urt@(UnsignedRelayedTransfer u) =
-  let signature = signMessage prk (hashRelayedTransfer urt)
-      in SignedRelayedTransfer (Record.insert (SProxy :: SProxy "signature") signature u)
+  let Signature signature = signMessage prk (keccak256 <<< toEthSignedMessage $ hashRelayedTransfer urt)
+      fixedSignature = Signature { r: signature.r, s: signature.s, v: signature.v + 27 } -- ethereum sigs use v=27 or v=28 instead of 0/1
+      in SignedRelayedTransfer (Record.insert (SProxy :: SProxy "signature") fixedSignature u)
 
 signWeb3 :: HexString -> Address -> Maybe String -> Web3 Signature
 signWeb3 hxs addr password = do

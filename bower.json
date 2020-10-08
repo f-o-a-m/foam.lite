@@ -11,7 +11,8 @@
     "tests"
   ],
   "dependencies": {
-    "purescript-chanterelle": "^4.1.0"
+    "purescript-chanterelle": "^4.1.0",
+    "purescript-numbers": "^7.0.0"
   },
   "devDependencies": {
     "purescript-spec": "^4.0.1"

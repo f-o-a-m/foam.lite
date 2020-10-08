@@ -85,6 +85,31 @@ instance eventGenericApprovalForAlleq :: Eq ApprovalForAll where
   eq = genericEq
 
 --------------------------------------------------------------------------------
+-- | MintedByRelay
+--------------------------------------------------------------------------------
+
+
+newtype MintedByRelay = MintedByRelay {minter :: Address,relayer :: Address,tokenID :: (UIntN (D2 :& D5 :& DOne D6))}
+
+derive instance newtypeMintedByRelay :: Newtype MintedByRelay _
+
+instance eventFilterMintedByRelay :: EventFilter MintedByRelay where
+  eventFilter _ addr = defaultFilter
+    # _address .~ Just addr
+    # _topics .~ Just [Just ( unsafePartial $ fromJust $ mkHexString "31ac1caf5ced21e20fe617960f1ba426412a461c5e549f257101fc125d5878b4")]
+
+instance indexedEventMintedByRelay :: IndexedEvent (Tuple0 ) (Tuple3 (Tagged (SProxy "minter") Address) (Tagged (SProxy "relayer") Address) (Tagged (SProxy "tokenID") (UIntN (D2 :& D5 :& DOne D6)))) MintedByRelay where
+  isAnonymous _ = false
+
+derive instance genericMintedByRelay :: Generic MintedByRelay _
+
+instance eventGenericMintedByRelayShow :: Show MintedByRelay where
+  show = genericShow
+
+instance eventGenericMintedByRelayeq :: Eq MintedByRelay where
+  eq = genericEq
+
+--------------------------------------------------------------------------------
 -- | Transfer
 --------------------------------------------------------------------------------
 
@@ -107,6 +132,31 @@ instance eventGenericTransferShow :: Show Transfer where
   show = genericShow
 
 instance eventGenericTransfereq :: Eq Transfer where
+  eq = genericEq
+
+--------------------------------------------------------------------------------
+-- | TransferredByRelay
+--------------------------------------------------------------------------------
+
+
+newtype TransferredByRelay = TransferredByRelay {owner :: Address,destination :: Address,relayer :: Address,tokenID :: (UIntN (D2 :& D5 :& DOne D6))}
+
+derive instance newtypeTransferredByRelay :: Newtype TransferredByRelay _
+
+instance eventFilterTransferredByRelay :: EventFilter TransferredByRelay where
+  eventFilter _ addr = defaultFilter
+    # _address .~ Just addr
+    # _topics .~ Just [Just ( unsafePartial $ fromJust $ mkHexString "0c34e927092b88f84074e9b93de846fbacd3be96dbfef963b9d17e6561630c12")]
+
+instance indexedEventTransferredByRelay :: IndexedEvent (Tuple0 ) (Tuple4 (Tagged (SProxy "owner") Address) (Tagged (SProxy "destination") Address) (Tagged (SProxy "relayer") Address) (Tagged (SProxy "tokenID") (UIntN (D2 :& D5 :& DOne D6)))) TransferredByRelay where
+  isAnonymous _ = false
+
+derive instance genericTransferredByRelay :: Generic TransferredByRelay _
+
+instance eventGenericTransferredByRelayShow :: Show TransferredByRelay where
+  show = genericShow
+
+instance eventGenericTransferredByRelayeq :: Eq TransferredByRelay where
   eq = genericEq
 
 --------------------------------------------------------------------------------
@@ -144,6 +194,19 @@ type BaseURIFn = Tagged (SProxy "baseURI()") (Tuple0 )
 
 baseURI :: TransactionOptions NoPay -> ChainCursor -> Web3 (Either CallError String)
 baseURI x0 cm = map unTuple1 <$> call x0 cm ((tagged $ Tuple0 ) :: BaseURIFn)
+
+--------------------------------------------------------------------------------
+-- | BurnFn
+--------------------------------------------------------------------------------
+
+
+type BurnFn = Tagged (SProxy "burn(uint256)") (Tuple1 (Tagged (SProxy "tokenId") (UIntN (D2 :& D5 :& DOne D6))))
+
+burn :: TransactionOptions NoPay -> { tokenId :: (UIntN (D2 :& D5 :& DOne D6)) } -> Web3 HexString
+burn x0 r = uncurryFields  r $ burn' x0
+   where
+    burn' :: TransactionOptions NoPay -> (Tagged (SProxy "tokenId") (UIntN (D2 :& D5 :& DOne D6))) -> Web3 HexString
+    burn' y0 y1 = sendTx y0 ((tagged $ Tuple1 y1) :: BurnFn)
 
 --------------------------------------------------------------------------------
 -- | GetApprovedFn
@@ -421,3 +484,16 @@ transferFrom x0 r = uncurryFields  r $ transferFrom' x0
    where
     transferFrom' :: TransactionOptions NoPay -> (Tagged (SProxy "from") Address) -> (Tagged (SProxy "to") Address) -> (Tagged (SProxy "tokenId") (UIntN (D2 :& D5 :& DOne D6))) -> Web3 HexString
     transferFrom' y0 y1 y2 y3 = sendTx y0 ((tagged $ Tuple3 y1 y2 y3) :: TransferFromFn)
+
+--------------------------------------------------------------------------------
+-- | TransferRelayedFn
+--------------------------------------------------------------------------------
+
+
+type TransferRelayedFn = Tagged (SProxy "transferRelayed(bytes,uint32,uint256,uint256,address)") (Tuple5 (Tagged (SProxy "signature") ByteString) (Tagged (SProxy "nonce") (UIntN (D3 :& DOne D2))) (Tagged (SProxy "feeAmount") (UIntN (D2 :& D5 :& DOne D6))) (Tagged (SProxy "tokenID") (UIntN (D2 :& D5 :& DOne D6))) (Tagged (SProxy "destination") Address))
+
+transferRelayed :: TransactionOptions NoPay -> { signature :: ByteString, nonce :: (UIntN (D3 :& DOne D2)), feeAmount :: (UIntN (D2 :& D5 :& DOne D6)), tokenID :: (UIntN (D2 :& D5 :& DOne D6)), destination :: Address } -> Web3 HexString
+transferRelayed x0 r = uncurryFields  r $ transferRelayed' x0
+   where
+    transferRelayed' :: TransactionOptions NoPay -> (Tagged (SProxy "signature") ByteString) -> (Tagged (SProxy "nonce") (UIntN (D3 :& DOne D2))) -> (Tagged (SProxy "feeAmount") (UIntN (D2 :& D5 :& DOne D6))) -> (Tagged (SProxy "tokenID") (UIntN (D2 :& D5 :& DOne D6))) -> (Tagged (SProxy "destination") Address) -> Web3 HexString
+    transferRelayed' y0 y1 y2 y3 y4 y5 = sendTx y0 ((tagged $ Tuple5 y1 y2 y3 y4 y5) :: TransferRelayedFn)

@@ -18,6 +18,7 @@ install: ## Install dependencies
 	npm install & bower install & wait
 
 build: install ## Build ALL the things
+	chanterelle build
 	pulp build --jobs $(JOBS)
 
 test: build cliquebait-start ## Starts cliquebait if needed and runs the test suite
