@@ -21,8 +21,11 @@ build-dapp: install ## Build ALL the things
 	chanterelle build
 	npm run build-dapp
 
-test: build cliquebait-start ## Starts cliquebait if needed and runs the test suite
-	npm run test
+build-app: install ## Build ALL the things
+	npm run build-app
+
+test-dapp: build cliquebait-start ## Starts cliquebait if needed and runs the test suite
+	npm run test-dapp
 
 cliquebait-start: ## Starts a Cliquebait instance in the background
 	@if docker inspect $(CLIQUEBAIT_CONTAINER_NAME) >/dev/null 2>&1; \
