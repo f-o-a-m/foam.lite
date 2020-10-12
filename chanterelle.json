@@ -1,6 +1,7 @@
 {
   "name": "foam5g",
   "version": "1.0.0",
+  "solc-version": "0.6.12",
   "source-dir": "contracts/",
   "modules": [
     "FungibleToken",

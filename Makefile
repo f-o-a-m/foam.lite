@@ -19,10 +19,11 @@ install: ## Install dependencies
 
 build: install ## Build ALL the things
 	chanterelle build
-	pulp build --jobs $(JOBS)
+	npm run pulp-build
+#	pulp build --jobs $(JOBS)
 
 test: build cliquebait-start ## Starts cliquebait if needed and runs the test suite
-	pulp test
+	npm run pulp-test
 
 cliquebait-start: ## Starts a Cliquebait instance in the background
 	@if docker inspect $(CLIQUEBAIT_CONTAINER_NAME) >/dev/null 2>&1; \
