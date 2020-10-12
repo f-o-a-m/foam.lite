@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "chanterelle-build": "chanterelle build",
     "build-app": "spago -x app.dhall build",
     "build-dapp": "spago -x dapp.dhall build",
     "test-dapp": "spago -x test.dhall test"

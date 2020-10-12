@@ -18,7 +18,7 @@ install: ## Install dependencies
 	npm install & wait
 
 build-dapp: install ## Build ALL the things
-	chanterelle build
+	npm run chanterelle-build
 	npm run build-dapp
 
 build-app: install ## Build ALL the things
