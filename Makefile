@@ -17,9 +17,9 @@ help: ## Ask for help!
 install: ## Install dependencies
 	npm install & wait
 
-build: install ## Build ALL the things
+build-dapp: install ## Build ALL the things
 	chanterelle build
-	npm run build
+	npm run build-dapp
 
 test: build cliquebait-start ## Starts cliquebait if needed and runs the test suite
 	npm run test

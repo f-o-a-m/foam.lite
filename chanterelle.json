@@ -11,7 +11,7 @@
     "@openzeppelin/contracts"
   ],
   "purescript-generator": {
-    "output-path": "src",
+    "output-path": "dapp",
     "module-prefix": "Contracts"
   },
   "solc-optimizer": {

@@ -4,8 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "spago -x test.dhall test",
-    "build": "spago build"
+    "build-app": "spago -x app.dhall build",
+    "build-dapp": "spago -x dapp.dhall build",
+    "test": "spago -x test.dhall test"
   },
   "author": "",
   "license": "ISC",

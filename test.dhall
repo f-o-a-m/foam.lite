@@ -1,4 +1,4 @@
-let conf = ./spago.dhall
+let conf = ./dapp.dhall
 
 in conf // {
   sources = conf.sources # [ "test/**/*.purs" ],
