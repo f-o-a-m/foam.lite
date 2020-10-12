@@ -5,8 +5,6 @@ node_js: v8.16.1
 services:
   - docker
 install:
-  - npm install -g f-o-a-m/chanterelle#v5.0.0
-  - chanterelle global-postinstall
   - npm install
   - make build-dapp
   - make build-app
