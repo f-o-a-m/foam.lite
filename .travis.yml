@@ -11,5 +11,5 @@ install:
 script:
   - make cliquebait-start
   - sleep 10
-  - npm -s test-dapp
+  - make test-dapp
   - make cliquebait-stop
