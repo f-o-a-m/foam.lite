@@ -15,14 +15,17 @@ help: ## Ask for help!
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 install: ## Install dependencies
-	npm install & bower install & wait
+	npm install & wait
 
-build: install ## Build ALL the things
-	chanterelle build
-	pulp build --jobs $(JOBS)
+build-dapp: install ## Build ALL the things
+	npm run chanterelle-build
+	npm run build-dapp
 
-test: build cliquebait-start ## Starts cliquebait if needed and runs the test suite
-	pulp test
+build-app: install ## Build ALL the things
+	npm run build-app
+
+test-dapp: build cliquebait-start ## Starts cliquebait if needed and runs the test suite
+	npm run test-dapp
 
 cliquebait-start: ## Starts a Cliquebait instance in the background
 	@if docker inspect $(CLIQUEBAIT_CONTAINER_NAME) >/dev/null 2>&1; \

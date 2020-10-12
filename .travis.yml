@@ -1,0 +1,15 @@
+language: node_js
+dist: trusty
+sudo: required
+node_js: v8.16.1
+services:
+  - docker
+install:
+  - npm install
+  - make build-dapp
+  - make build-app
+script:
+  - make cliquebait-start
+  - sleep 10
+  - make test-dapp
+  - make cliquebait-stop
