@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "postinstall": "spago -x contracts.dhall build",
     "chanterelle-build": "chanterelle build",
     "build-app": "spago -x app.dhall build",
     "build-dapp": "spago -x dapp.dhall build",
