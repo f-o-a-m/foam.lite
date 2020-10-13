@@ -1,4 +1,4 @@
-module UI.Component.RelayableNFT.Data where
+module UI.Component.RelayableNFT.Types where
 
 import Prelude
 
