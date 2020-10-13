@@ -2,17 +2,27 @@ module UI.Component.RelayableNFT.Table where
 
 import Prelude
 
-import Control.Lazy (fix)
+import Contracts.RelayableNFT as RNFT
+import Control.Monad.Reader (class MonadAsk, ask)
 import Data.Array ((..), (:))
+import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), maybe)
-import Effect.Aff (launchAff_)
+import Effect.Aff (error, killFiber, launchAff, launchAff_)
 import Effect.Aff.Class (class MonadAff)
+import Effect.Class.Console as Console
+import Effect.Exception (throwException)
+import Halogen (liftEffect)
 import Halogen as H
 import Halogen.HTML as HH
+import Halogen.Query.EventSource (Finalizer(..))
 import Halogen.Query.EventSource as ES
+import Network.Ethereum.Web3 (Change(..), EventAction(..), eventFilter, runWeb3)
+import Network.Ethereum.Web3.Contract.Events (pollEvent')
 import Ocelot.Block.Table as Table
 import Ocelot.HTML.Properties (css)
-import UI.Component.RelayableNFT.Types (TableEntry, generateTableEntry, tableEntryView)
+import Type.Proxy (Proxy(..))
+import UI.Component.RelayableNFT.Types (TableEntry(..), generateTableEntry, tableEntryView)
+import UI.Monad (AppEnv(..))
 import UI.Style.Block.Backdrop as Backdrop
 import UI.Style.Block.Documentation as Documentation
 
@@ -31,6 +41,7 @@ type Message = Void
 component
   :: ∀ m.
      MonadAff m
+  => MonadAsk AppEnv m
   => H.Component HH.HTML Query Input Message m
 component =
   H.mkComponent
@@ -89,7 +100,11 @@ component =
             ]
 
 
-    eval :: forall f i s. MonadAff m => H.HalogenQ f Action i ~> H.HalogenM State Action s Message m
+    eval :: forall f i s. 
+            MonadAff m
+         => MonadAsk AppEnv m
+         => H.HalogenQ f Action i
+         ~> H.HalogenM State Action s Message m
     eval = H.mkEval $ H.defaultEval
       { handleAction = handleAction
       , initialize = Just Initialize
@@ -98,11 +113,31 @@ component =
         handleAction :: Action -> H.HalogenM State Action s Message m Unit
         handleAction = case _ of
           Initialize -> do
+            AppEnv {web3Provider, contracts: {relayableNFT}} <- ask
             void $ H.subscribe $ ES.effectEventSource (\emitter -> do
-              launchAff_ $ fix \loop -> do
-                pure unit
-                loop
-              pure mempty
+              let 
+                  filters = 
+                    { mint: eventFilter (Proxy :: Proxy RNFT.MintedByRelay) relayableNFT
+                    , transfer: eventFilter (Proxy :: Proxy RNFT.TransferredByRelay) relayableNFT
+                    }
+                  handlers = 
+                    { mint: \e -> do
+                        Change c <- ask
+                        liftEffect $ ES.emit emitter $ InsertNewTableEntry $ Minted c.transactionHash e
+                        pure ContinueEvent
+                    , transfer: \e -> do
+                        Change c <- ask
+                        liftEffect $ ES.emit emitter $ InsertNewTableEntry $ Transferred c.transactionHash e
+                        pure ContinueEvent
+                    }
+              fibre <- launchAff $ do
+                ePollResult <- runWeb3 web3Provider $ pollEvent' filters handlers
+                case ePollResult of
+                  Left web3Error -> liftEffect $ throwException $ error $ show web3Error
+                  Right result -> case result of
+                    Left bn -> Console.log $ "Polling RelayableNFT terminated by Filter at block " <> show bn
+                    Right receipt -> Console.log $ "Polling RelayableNFT terminated by app at block " <> show receipt.blockNumber
+              pure $ Finalizer $ launchAff_ $ killFiber (error "Component teardown") fibre
               )
           InsertNewTableEntry entry -> do
             st <- H.get
