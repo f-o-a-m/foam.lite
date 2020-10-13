@@ -1,4 +1,4 @@
-module UI.Block.Backdrop where
+module UI.Style.Block.Backdrop where
 
 import Prelude
 

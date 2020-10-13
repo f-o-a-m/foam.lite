@@ -1,4 +1,4 @@
-module UI.Block.Documentation where
+module UI.Style.Block.Documentation where
 
 import Prelude
 
