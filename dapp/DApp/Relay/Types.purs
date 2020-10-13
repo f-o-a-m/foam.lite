@@ -3,7 +3,7 @@ module DApp.Relay.Types where
 import Prelude
 
 import Control.Monad.Error.Class (throwError)
-import Data.ByteString (ByteString, Encoding(Hex, UTF8), fromString, singleton) as BS
+import Data.ByteString (ByteString, Encoding(Hex, UTF8), fromString, length, singleton) as BS
 import Data.Maybe (Maybe, fromJust, maybe)
 import Data.String as String
 import Data.Symbol (SProxy(..))
@@ -58,8 +58,10 @@ hashRelayedTransfer = keccak256 <<< packRelayedTransfer
 
 toEthSignedMessage :: BS.ByteString -> BS.ByteString
 toEthSignedMessage bs =
-  let pfx = unsafePartialBecause "we're packing a known good prefix into a bytestring" fromJust $ BS.fromString "Ethereum Signed Message:\n32" BS.UTF8
-   in (BS.singleton (mkQuotient 25)) <> pfx <> bs -- 25 = 0x19 (i.e \x19)
+  let x19 = BS.singleton $ mkQuotient 25
+      pfx = unsafePartialBecause "we're packing a known good prefix into a bytestring" fromJust $ BS.fromString "Ethereum Signed Message:\n" BS.UTF8
+      lenStr = unsafePartialBecause "we're doing a BS.fromString <<< show Int" fromJust <<< flip BS.fromString BS.UTF8 <<< show <<< BS.length
+   in x19 <> pfx <> lenStr bs <> bs -- 25 = 0x19 (i.e \x19)
 
 -- todo: this probably needs to sign keccak256("\x19Ethereum Signed Message:\n32" + <hashRelayedMessage>) like personal_sign does...
 signRelayedMessage :: PrivateKey -> UnsignedRelayedMessage -> SignedRelayedMessage
