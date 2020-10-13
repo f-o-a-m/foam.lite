@@ -5,7 +5,7 @@ import Prelude
 import Effect (Effect)
 import Halogen.Aff as HA
 import Halogen.VDom.Driver (runUI)
-import UI.Component.Table as Table
+import UI.Component.RelayableNFT.Table as Table
 
 
 
