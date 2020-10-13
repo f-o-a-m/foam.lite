@@ -18,6 +18,12 @@ generateAddress
 generateAddress i = mkAddress' $ "0x" <> 
   (String.take 40 $ foldMap (show <<< const i) (1 .. 40))
 
+generateTxHash
+  :: Int
+  -> HexString
+generateTxHash n =  mkHexString' $ "0x" <> 
+  (String.take 64 $ foldMap (show <<< const n) (1 .. 64))
+
 generateTokenID
   :: Int
   -> UIntN S256

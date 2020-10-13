@@ -5,14 +5,14 @@ import Prelude
 import Contracts.RelayableNFT as RNFT
 import Data.Array ((..))
 import Data.Maybe (Maybe(..), maybe)
+import Data.Mock as Mock
 import Halogen as H
 import Halogen.HTML as HH
-import Ocelot.Block.Icon as Icon
+import Network.Ethereum.Core.HexString (HexString)
 import Ocelot.Block.Table as Table
 import Ocelot.HTML.Properties (css)
 import UI.Style.Block.Backdrop as Backdrop
 import UI.Style.Block.Documentation as Documentation
-import Data.Mock as Mock
 
 type State = Unit
 
@@ -38,8 +38,8 @@ component =
     render _ =
       HH.div_
         [ Documentation.block_
-            { header: "Table"
-            , subheader: "Tabular Data"
+            { header: "RelaybleNFT Events Table"
+            , subheader: "Table of Mint and Transfer Events for RelaybleNFT Contract"
             }
             [ Backdrop.backdrop_
               [ renderTable ]
@@ -55,6 +55,7 @@ component =
         renderHeader =
           Table.row_
             [ Table.header_ [ HH.text "Type" ]
+            , Table.header_ [ HH.text "Tx Hash" ]
             , Table.header_ [ HH.text "Minter" ]
             , Table.header_ [ HH.text "Owner" ]
             , Table.header_ [ HH.text "Destination" ]
@@ -70,12 +71,13 @@ component =
           let view = tableEntryView entry
           in 
             [ Table.cell  [ css "text-left" ] [ HH.text view._type ]
+            , Table.cell  [ css "text-left" ] [ HH.text view.txHash ]
             , Table.cell  [ css "text-left" ] $ 
-                maybe [ Icon.error [ css "text-red" ] ] (\a -> [ HH.text a ]) view.minter
+                maybe [ HH.text "N/A" ] (\a -> [ HH.text a ]) view.minter
             , Table.cell  [ css "text-left" ] $ 
-                maybe [ Icon.error [ css "text-red" ] ] (\a -> [ HH.text a ]) view.owner
+                maybe [ HH.text "N/A" ] (\a -> [ HH.text a ]) view.owner
             , Table.cell  [ css "text-left" ] $ 
-                maybe [ Icon.error [ css "text-red" ] ] (\a -> [ HH.text a ]) view.destination
+                maybe [ HH.text "N/A" ] (\a -> [ HH.text a ]) view.destination
             , Table.cell  [ css "text-left" ] [ HH.text view.relayer ]
             , Table.cell  [ css "text-left" ] [ HH.text view.tokenID ]
             ]
@@ -84,8 +86,8 @@ tableData :: Array TableEntry
 tableData = map generateTableEntry (1 .. 10)
 
 data TableEntry 
-  = Minted RNFT.MintedByRelay
-  | Transferred RNFT.TransferredByRelay
+  = Minted HexString RNFT.MintedByRelay
+  | Transferred HexString RNFT.TransferredByRelay
 
 -- newtype MintedByRelay = MintedByRelay {minter :: Address,relayer :: Address,tokenID :: (UIntN (D2 :& D5 :& DOne D6))}
 -- newtype TransferredByRelay = TransferredByRelay {owner :: Address,destination :: Address,relayer :: Address,tokenID :: (UIntN (D2 :& D5 :& DOne D6))}
@@ -93,22 +95,25 @@ data TableEntry
 tableEntryView
   :: TableEntry
   -> { _type :: String
+     , txHash :: String
      , minter :: Maybe String
      , owner :: Maybe String
      , destination :: Maybe String
      , relayer :: String
      , tokenID :: String
      }
-tableEntryView (Minted (RNFT.MintedByRelay a)) =
+tableEntryView (Minted txHash (RNFT.MintedByRelay a)) =
   { _type: "Minted"
+  , txHash: show txHash
   , minter: Just $ show a.minter
   , owner: Nothing
   , destination: Nothing
   , relayer: show a.relayer
   , tokenID: show a.tokenID
   }
-tableEntryView (Transferred (RNFT.TransferredByRelay a)) =
+tableEntryView (Transferred txHash (RNFT.TransferredByRelay a)) =
   { _type: "Transferred"
+  , txHash: show txHash
   , minter: Nothing
   , owner: Just $ show a.owner
   , destination: Just $ show a.destination
@@ -124,13 +129,13 @@ generateTableEntry
   :: Int
   -> TableEntry
 generateTableEntry n
-  | n `mod` 2 == 0 = Minted $
+  | n `mod` 2 == 0 = Minted (Mock.generateTxHash n) $
       RNFT.MintedByRelay 
         { minter: Mock.generateAddress n
         , relayer: Mock.generateAddress (n + 1)
         , tokenID: Mock.generateTokenID (n + 2)
         }
-  | otherwise = Transferred $
+  | otherwise = Transferred (Mock.generateTxHash n) $
       RNFT.TransferredByRelay
         { owner: Mock.generateAddress n
         , destination: Mock.generateAddress (n + 1)
