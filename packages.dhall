@@ -152,6 +152,48 @@ let additions =
         , version =
             "v3.0.0"
         }
+      , ocelot =
+        { dependencies =
+          [ "aff-promise"
+          , "affjax"
+          , "argonaut"
+          , "bigints"
+          , "console"
+          , "debug"
+          , "effect"
+          , "email-validate"
+          , "formatters"
+          , "fuzzy"
+          , "halogen"
+          , "halogen-renderless"
+          , "halogen-select"
+          , "halogen-storybook"
+          , "html-parser-halogen"
+          , "js-timers"
+          , "numbers"
+          , "psci-support"
+          , "read"
+          , "remotedata"
+          , "svg-parser"
+          , "svg-parser-halogen"
+          , "test-unit"
+          , "variant"
+          ]
+        , repo =
+            "https://github.com/srghma/purescript-ocelot"
+        , version =
+            "13228e75fe573e05fc0db55ed51c5bd9cce9a899"
+        }
+      , halogen-renderless =
+          { dependencies =
+            [ "prelude"
+            , "control"
+            ]
+          , repo = 
+            "https://github.com/purescript-deprecated/purescript-halogen-renderless"
+          , version =
+            "v0.0.4"
+          }
       }
 
 in  upstream // overrides // additions

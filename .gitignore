@@ -13,3 +13,4 @@
 .DS_Store
 package-lock.json
 /.spago/
+dist/bundle.js

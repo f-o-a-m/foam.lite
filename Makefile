@@ -21,9 +21,6 @@ build-dapp: install ## Build ALL the things
 	npm run chanterelle-build
 	npm run build-dapp
 
-build-app: install ## Build ALL the things
-	npm run build-app
-
 test-dapp: build cliquebait-start ## Starts cliquebait if needed and runs the test suite
 	npm run test-dapp
 
@@ -62,3 +59,9 @@ cliquebait-tail: ## Tail the logs of a running background Cliquebait instance
 cliquebait-restart: ## Stop and start the background Cliquebait instance
 	@$(MAKE) cliquebait-stop
 	@$(MAKE) cliquebait-start
+
+build-app: ## compile the app
+	npm run build-app
+
+serve-app: ## bundle and serve the app
+	npm run bundle-app && npm run browserify && serve dist
