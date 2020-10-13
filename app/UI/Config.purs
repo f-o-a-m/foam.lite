@@ -4,6 +4,7 @@ import Prelude
 
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
+import Effect.Console (log)
 import Network.Ethereum.Core.Signatures (Address, mkAddress)
 import Network.Ethereum.Web3 (Provider, metamaskProvider, mkHexString)
 import Partial.Unsafe (unsafeCrashWith)
@@ -22,7 +23,8 @@ newtype AppEnv = AppEnv
   }
 
 makeAppEnv :: Effect AppEnv
-makeAppEnv =
+makeAppEnv = do
+  log relayableNFTImpl
   case mkHexString relayableNFTImpl >>= mkAddress of
     Nothing -> unsafeCrashWith $ "Unable to parse RelayableNFT Address:" <> relayableNFTImpl
     Just relayableNFT -> do 

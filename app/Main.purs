@@ -10,8 +10,6 @@ import UI.Component.RelayableNFT.Table as Table
 import UI.Config (makeAppEnv)
 import UI.Monad (runAppM)
 
-
-
 main :: Effect Unit
 main = do 
   environment <- makeAppEnv
@@ -19,4 +17,3 @@ main = do
     body <- HA.awaitBody
     let component = H.hoist (runAppM environment) Table.component
     runUI component unit body
-      
