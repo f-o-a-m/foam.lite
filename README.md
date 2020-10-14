@@ -8,7 +8,7 @@ To build the UI, make sure you have already build and deployed the dapp (see ##D
 
 ```bash
 > make build-app
-> make serve-app
+> RELAYER_NFT=<contract adddress> make serve-app
 ```
 
 The default address is [localhost:5000](localhost:5000)
