@@ -16,7 +16,7 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.Query.EventSource (Finalizer(..))
 import Halogen.Query.EventSource as ES
-import Network.Ethereum.Web3 (Change(..), EventAction(..), eventFilter, runWeb3)
+import Network.Ethereum.Web3 (Change(..), EventAction(..), MultiFilterStreamState(..), event', eventFilter, runWeb3)
 import Network.Ethereum.Web3.Contract.Events (pollEvent')
 import Ocelot.Block.Table as Table
 import Ocelot.HTML.Properties (css)
@@ -45,7 +45,7 @@ component
   => H.Component HH.HTML Query Input Message m
 component =
   H.mkComponent
-    { initialState: const $ map generateTableEntry (1 .. 10)
+    { initialState: const $ map generateTableEntry (1 .. 2)
     , render
     , eval
     }
@@ -131,12 +131,14 @@ component =
                         pure ContinueEvent
                     }
               fibre <- launchAff $ do
-                ePollResult <- runWeb3 web3Provider $ pollEvent' filters handlers
+                ePollResult <- runWeb3 web3Provider $ event' filters handlers {windowSize:1, trailBy:0}
                 case ePollResult of
                   Left web3Error -> liftEffect $ throwException $ error $ show web3Error
                   Right result -> case result of
-                    Left bn -> Console.log $ "Polling RelayableNFT terminated by Filter at block " <> show bn
-                    Right receipt -> Console.log $ "Polling RelayableNFT terminated by app at block " <> show receipt.blockNumber
+                    Left (MultiFilterStreamState {currentBlock}) -> 
+                      Console.log $ "Polling RelayableNFT terminated by Filter at block " <> show currentBlock
+                    Right receipt -> 
+                      Console.log $ "Polling RelayableNFT terminated by app at block " <> show receipt.blockNumber
               pure $ Finalizer $ launchAff_ $ killFiber (error "Component teardown") fibre
               )
           InsertNewTableEntry entry -> do
