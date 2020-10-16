@@ -9,6 +9,7 @@ import Data.Time.Duration (Minutes(..), fromDuration)
 import Effect (Effect)
 import Effect.Aff (error, launchAff_, throwError)
 import Effect.Class (liftEffect)
+import Effect.Class.Console as Console
 import Network.Ethereum.Core.HexString (HexString)
 import Network.Ethereum.Core.Signatures (mkPrivateKey)
 import Node.Process (lookupEnv)
@@ -19,6 +20,7 @@ import Spec.DApp.Relay (relaySpec) as DAppSpecs
 import Spec.DApp.RelayableNFT (relayableNFTSpec) as DAppSpecs
 import Test.Spec.Reporter.Console (consoleReporter)
 import Test.Spec.Runner (defaultConfig, runSpec')
+import Unsafe.Coerce (unsafeCoerce)
 
 foreign import generatePrivateKey :: forall m. Monad m => (HexString -> m HexString) -> m HexString
 
@@ -26,6 +28,7 @@ main :: Effect Unit
 main = launchAff_ do
   nodeUrl <- liftEffect $ fromMaybe "http://localhost:8545" <$> lookupEnv "NODE_URL"
   testConfig <- buildTestConfig nodeUrl 60 deployScript
+  Console.log $ unsafeCoerce testConfig
   privateKey' <- generatePrivateKey pure
   privateKey <- maybe (throwError $ error "Couldn't generate a private key outside of web3!") pure $ mkPrivateKey privateKey'
   let specConfig = testConfigToSpecConfig testConfig privateKey

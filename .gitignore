@@ -15,3 +15,5 @@ package-lock.json
 /.spago/
 */.spago/
 */output/
+dist/bundle.js
+

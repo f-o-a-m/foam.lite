@@ -21,9 +21,6 @@ build-dapp: install ## Build the DApp (contracts, etc.)
 	npm run chanterelle-build
 	npm run build-dapp
 
-build-app: install ## Build the frontend
-	npm run build-app
-
 test-dapp: build cliquebait-start ## Starts cliquebait if needed and runs the test suite
 	npm run test-dapp
 
@@ -62,6 +59,12 @@ cliquebait-tail: ## Tail the logs of a running background Cliquebait instance
 cliquebait-restart: ## Stop and start the background Cliquebait instance
 	@$(MAKE) cliquebait-stop
 	@$(MAKE) cliquebait-start
+
+build-app: install ## Build the frontend
+	npm run build-app
+
+serve-app: ## bundle and serve the app
+	npm run bundle-app && npm run browserify && serve dist
 
 deploy-contracts: build-dapp ## Deploy contracts so the server can run
 	npm run deploy-contracts

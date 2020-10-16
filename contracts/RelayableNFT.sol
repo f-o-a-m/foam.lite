@@ -114,6 +114,9 @@ contract RelayableNFT is ERC721Burnable {
         // mint the token
         uint256 newTokenID = _mintRelayableNFT(owner, relayer, relayedMessage.tokenURI);
 
+        // emit the event
+        emit MintedByRelay(owner, relayer, newTokenID);
+
         return newTokenID;
     }
 
@@ -152,6 +155,9 @@ contract RelayableNFT is ERC721Burnable {
         } else {
             _transfer(owner, destination, tokenID);
         }
+
+        // emit the event
+        emit TransferredByRelay(owner, destination, relayer, tokenID);
     }
 
     /**

@@ -11,7 +11,10 @@
     "build-dapp": "spago -x dapp.dhall build",
     "build-server": "spago -x server.dhall build",
     "run-server": "spago -x server.dhall run",
-    "test-dapp": "spago -x test.dhall test"
+    "test-dapp": "spago -x test.dhall test",
+    "bundle-app": "spago -x app.dhall bundle-app --to dist/bundle.js",
+    "browserify": "browserify dist/bundle.js -o dist/bundle.js -t envify",
+    "serve": "serve dist"
   },
   "author": "",
   "license": "ISC",
@@ -23,7 +26,12 @@
     "web3": "^1.3.0"
   },
   "devDependencies": {
+    "babel-core": "^6.26.3",
+    "babel-runtime": "^6.26.0",
+    "browserify": "^17.0.0",
     "chanterelle": "github:f-o-a-m/chanterelle#v5.0.0",
+    "envify": "^4.1.0",
+    "parcel": "^1.12.4",
     "pulp": "^15.0.0",
     "purescript": "^0.13.0",
     "spago": "^0.16.0"
