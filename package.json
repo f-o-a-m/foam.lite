@@ -6,8 +6,11 @@
   "scripts": {
     "postinstall": "spago -x contracts.dhall build",
     "chanterelle-build": "chanterelle build",
+    "deploy-contracts": "chanterelle deploy output/DApp.Deploy.Script/index.js",
     "build-app": "spago -x app.dhall build",
     "build-dapp": "spago -x dapp.dhall build",
+    "build-server": "spago -x server.dhall build",
+    "run-server": "spago -x server.dhall run",
     "test-dapp": "spago -x test.dhall test"
   },
   "author": "",

@@ -14,7 +14,7 @@ import Effect.Aff (forkAff, joinFiber)
 import Network.Ethereum.Web3 (ChainCursor(..), TransactionReceipt(..), TransactionStatus(..), embed, eventFilter, runWeb3)
 import Partial.Unsafe (unsafePartial)
 import Spec.DApp.Common (SpecConfig)
-import Spec.Helpers (awaitEvent, expectRight', expectRight'', forceUIntN, zeroAddress)
+import Spec.Helpers (awaitEvent, expectRight', expectRight'', forceUIntN, resizeUIntN, zeroAddress)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 import Type.Proxy (Proxy(..))
@@ -110,7 +110,7 @@ relayableNFTSpec { provider, primaryAccount, secondaryAccounts, fungibleToken, r
       mintRelayed signedMessage txOpts
     TransactionReceipt txr <- pollTransactionReceipt txh provider
     txr.status `shouldEqual` Succeeded
-    tokenID <- joinFiber fEv
+    tokenID <- resizeUIntN <$> joinFiber fEv
     txh' <- expectRight' =<< runWeb3 provider do
       nonce <- expectRight' =<< getRelayNonce { rnftAddress: relayableNFT.deployAddress , nonceOf: secondaryAccount, checkFrom: primaryAccount, checkAt: Latest }
       let msg = UnsignedRelayedTransfer { nonce, feeAmount: relayFeeAmount, tokenID, destination: tertiaryAccount }
@@ -120,7 +120,7 @@ relayableNFTSpec { provider, primaryAccount, secondaryAccounts, fungibleToken, r
       transferRelayed signedMessage txOpts
     TransactionReceipt txr' <- pollTransactionReceipt txh' provider
     txr'.status `shouldEqual` Succeeded
-    ownerOfToken <- expectRight'' =<< (runWeb3 provider $ RNFT.ownerOf txOpts Latest { tokenId: tokenID })
+    ownerOfToken <- expectRight'' =<< (runWeb3 provider $ RNFT.ownerOf txOpts Latest { tokenId: resizeUIntN tokenID })
     ownerOfToken `shouldEqual` tertiaryAccount
 
   it "can be transferred for someone else via transferRelayed, with purescript-eth-core doing the signing" do
@@ -135,7 +135,7 @@ relayableNFTSpec { provider, primaryAccount, secondaryAccounts, fungibleToken, r
       mintRelayed signedMessage txOpts
     TransactionReceipt txr <- pollTransactionReceipt txh provider
     txr.status `shouldEqual` Succeeded
-    tokenID <- joinFiber fEv
+    tokenID <- resizeUIntN <$> joinFiber fEv
     txh' <- expectRight' =<< runWeb3 provider do
       nonce <- expectRight' =<< getRelayNonce { rnftAddress: relayableNFT.deployAddress , nonceOf: nonWeb3Account.address, checkFrom: primaryAccount, checkAt: Latest }
       let msg = UnsignedRelayedTransfer { nonce, feeAmount: relayFeeAmount, tokenID, destination: tertiaryAccount }
@@ -145,7 +145,7 @@ relayableNFTSpec { provider, primaryAccount, secondaryAccounts, fungibleToken, r
       transferRelayed signedMessage txOpts
     TransactionReceipt txr' <- pollTransactionReceipt txh' provider
     txr'.status `shouldEqual` Succeeded
-    ownerOfToken <- expectRight'' =<< (runWeb3 provider $ RNFT.ownerOf txOpts Latest { tokenId: tokenID })
+    ownerOfToken <- expectRight'' =<< (runWeb3 provider $ RNFT.ownerOf txOpts Latest { tokenId: resizeUIntN tokenID })
     ownerOfToken `shouldEqual` tertiaryAccount
 
   it "can be burned for someone else via transferRelayed" do
@@ -161,7 +161,7 @@ relayableNFTSpec { provider, primaryAccount, secondaryAccounts, fungibleToken, r
       mintRelayed signedMessage txOpts
     TransactionReceipt txr <- pollTransactionReceipt txh provider
     txr.status `shouldEqual` Succeeded
-    tokenID <- joinFiber fEv
+    tokenID <- resizeUIntN <$> joinFiber fEv
     txh' <- expectRight' =<< runWeb3 provider do
       nonce <- expectRight' =<< getRelayNonce { rnftAddress: relayableNFT.deployAddress , nonceOf: secondaryAccount, checkFrom: primaryAccount, checkAt: Latest }
       let msg = UnsignedRelayedTransfer { nonce, feeAmount: relayFeeAmount, tokenID, destination: zeroAddress }
@@ -171,7 +171,7 @@ relayableNFTSpec { provider, primaryAccount, secondaryAccounts, fungibleToken, r
       transferRelayed signedMessage txOpts
     TransactionReceipt txr' <- pollTransactionReceipt txh' provider
     txr'.status `shouldEqual` Succeeded
-    ownerOfToken <- expectRight'' =<< (runWeb3 provider $ RNFT.ownerOf txOpts Latest { tokenId: tokenID })
+    ownerOfToken <- expectRight'' =<< (runWeb3 provider $ RNFT.ownerOf txOpts Latest { tokenId: resizeUIntN tokenID })
     ownerOfToken `shouldEqual` zeroAddress
 
     

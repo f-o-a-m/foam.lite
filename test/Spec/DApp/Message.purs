@@ -1,11 +1,12 @@
 module Spec.DApp.Message where
 
 import Prelude
+
 import DApp.Message (DAppMessage, parseDAppMessage)
 import Data.Either (Either(..))
 import Data.Enum (enumFromTo)
 import Data.Foldable (for_)
-import Data.Tuple (Tuple(..))
+import Data.Tuple (Tuple(..), fst)
 import Effect.Class (class MonadEffect, liftEffect)
 import Random.LCG (randomSeed)
 import Test.QuickCheck.Arbitrary (arbitrary)
@@ -25,7 +26,4 @@ messageSpec = describe "DApp.Message" do
 mkMessage :: forall m. MonadEffect m => m DAppMessage
 mkMessage = do
     newSeed <- liftEffect randomSeed
-    let (Tuple res _) = runGen arbitrary $ { newSeed, size: 10 }
-    pure res
-          
-  
+    pure $ fst $ runGen arbitrary $ { newSeed, size: 10 }

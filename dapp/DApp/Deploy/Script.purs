@@ -1,4 +1,4 @@
-module DApp.Deploy.Script (deployScript) where
+module DApp.Deploy.Script (deploy, deployScript) where
   
 import Prelude
 
@@ -26,3 +26,7 @@ deployScript = do
   fungibleToken <- deployContract' $ fungibleTokenConfig { initialSupply }
   relayableNFT <- deployContract' $ relayableNFTConfig { fungibleToken: fungibleToken.deployAddress }
   pure $ { fungibleToken, relayableNFT }
+
+-- for chanterelle compatibility
+deploy :: DeployM Unit
+deploy = void deployScript

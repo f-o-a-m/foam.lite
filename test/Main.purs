@@ -15,6 +15,7 @@ import Node.Process (lookupEnv)
 import Spec.DApp.Common (testConfigToSpecConfig)
 import Spec.DApp.FungibleToken (fungibleTokenSpec) as DAppSpecs
 import Spec.DApp.Message (messageSpec) as DAppSpecs
+import Spec.DApp.Relay (relaySpec) as DAppSpecs
 import Spec.DApp.RelayableNFT (relayableNFTSpec) as DAppSpecs
 import Test.Spec.Reporter.Console (consoleReporter)
 import Test.Spec.Runner (defaultConfig, runSpec')
@@ -30,5 +31,6 @@ main = launchAff_ do
   let specConfig = testConfigToSpecConfig testConfig privateKey
   runSpec' defaultConfig {timeout = Just (fromDuration $ Minutes 20.0) } [consoleReporter] do
     DAppSpecs.messageSpec
+    DAppSpecs.relaySpec
     DAppSpecs.fungibleTokenSpec specConfig
     DAppSpecs.relayableNFTSpec specConfig

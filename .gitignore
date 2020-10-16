@@ -13,3 +13,5 @@
 .DS_Store
 package-lock.json
 /.spago/
+*/.spago/
+*/output/
