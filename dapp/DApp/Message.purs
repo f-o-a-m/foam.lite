@@ -60,7 +60,8 @@ instance arbitraryDAppMessage :: Arbitrary DAppMessage where
     where
       genArbStr = do
         nea <- arrayOf1 arbitrary
-        let arr = Array.cons (NE.head nea) (NE.tail nea)
+        -- limit our arb string length
+        let arr = Array.take 40 $ Array.cons (NE.head nea) (NE.tail nea)
         pure $ String.fromCharArray arr
       genArbitrary = ArbitraryString <$> genArbStr
       genLocation  = do

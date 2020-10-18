@@ -5,7 +5,7 @@ import Prelude
 import Control.Monad.Error.Class (throwError)
 import Data.Argonaut (class EncodeJson, encodeJson)
 import Data.Array (replicate)
-import Data.ByteString (ByteString, Encoding(Hex, UTF8), fromString, fromUTF8, length, singleton, toString, toUTF8) as BS
+import Data.ByteString (ByteString, Encoding(Hex, UTF8), fromString, length, singleton, toString) as BS
 import Data.Either (Either)
 import Data.EitherR (fmapL)
 import Data.Identity (Identity(..))
@@ -28,7 +28,7 @@ import Record as Record
 import Text.Parsing.Parser (ParserT, fail, runParserT)
 import Type.Quotient (mkQuotient)
 
-type UnsignedRelayedMessageR r = (nonce :: UIntN S32, feeAmount :: UIntN S128, tokenURI :: String | r)
+type UnsignedRelayedMessageR r = (nonce :: UIntN S32, feeAmount :: UIntN S128, tokenData :: BS.ByteString | r)
 type SignedRelayedMessageR r = UnsignedRelayedMessageR (signature :: Signature | r)
 newtype UnsignedRelayedMessage = UnsignedRelayedMessage (Record (UnsignedRelayedMessageR ()))
 newtype SignedRelayedMessage = SignedRelayedMessage (Record (SignedRelayedMessageR ()))
@@ -46,7 +46,7 @@ instance encodeJsonSignedRelayedMessage :: EncodeJson SignedRelayedMessage where
             signature: { r: sig.r, s: sig.s, v: sig.v },
             nonce: unUIntN s.nonce,
             feeAmount: unUIntN s.feeAmount,
-            tokenURI: s.tokenURI
+            tokenData: fromByteString s.tokenData
           }
 
 type UnsignedRelayedTransferR r = (nonce :: UIntN S32, feeAmount :: UIntN S128, tokenID :: UIntN S32, destination :: Address | r)
@@ -84,20 +84,20 @@ packUIntNToHex n =
       padding = String.fromCodePointArray $ replicate neededChars (String.codePointFromChar '0')
    in padding <> hex
 
-packStringToHex :: String -> String
-packStringToHex s = 
-  let hex = BS.toString (BS.toUTF8 s) BS.Hex
+packByteStringToHex :: BS.ByteString -> String
+packByteStringToHex s =
+  let hex = BS.toString s BS.Hex
       len = String.length hex / 2 -- 2 hex chars per byte
       encodedLen = packUIntNToHex (unsafePartialBecause "we're willingly limiting our length to 1 byte" fromJust $ uIntNFromBigNumber s8 (embed $ len))
    in encodedLen <> hex
 
-parseStringFromHex :: forall m. Monad m => ParserT HexString m String
-parseStringFromHex = do
+parseByteStringFromHex :: forall m. Monad m => ParserT HexString m BS.ByteString
+parseByteStringFromHex = do
   let numLengthHexChars = sizeVal s8 / 4 
   maybeLen <- (uIntNFromBigNumber s8 <<< toBigNumber <$> AbiEncoding.take numLengthHexChars)
   len <- maybe (fail "Couldn't parse uint8 length") pure $ maybeLen
   let numStringHexChars = (BigNumber.unsafeToInt $ unUIntN len) * 2
-  (BS.fromUTF8 <<< toByteString) <$> AbiEncoding.take numStringHexChars
+  toByteString <$> AbiEncoding.take numStringHexChars
 
 parseUIntNFromHex :: forall m s. Monad m => KnownSize s => ParserT HexString m (UIntN s)
 parseUIntNFromHex = do
@@ -120,13 +120,13 @@ parseAddressHex = do
 
 -- this is for packing a *signed* message, e.g., for broadcast over the air. its more like an encodePacked but more aggressive (with a 1-byte length prefix for tokenURI)
 packSignedRelayedMessage :: SignedRelayedMessage -> BS.ByteString
-packSignedRelayedMessage (SignedRelayedMessage { signature, nonce, feeAmount, tokenURI }) = packedSignature <>
+packSignedRelayedMessage (SignedRelayedMessage { signature, nonce, feeAmount, tokenData }) = packedSignature <>
   (unsafePartialBecause "were just making a bytestring from hexstrings, what could possibly go wrong" fromJust $ 
-    BS.fromString (packNonce <> packFee <> packTokenURI) BS.Hex)
+    BS.fromString (packNonce <> packFee <> packTokenData) BS.Hex)
   where packedSignature = packSignature signature
         packNonce = packUIntNToHex nonce
         packFee = packUIntNToHex feeAmount
-        packTokenURI = packStringToHex tokenURI
+        packTokenData = packByteStringToHex tokenData
 
 parseSignedRelayedMessage :: BS.ByteString -> Either String SignedRelayedMessage
 parseSignedRelayedMessage bs = fmapL show ret
@@ -134,8 +134,8 @@ parseSignedRelayedMessage bs = fmapL show ret
           signature <- parseSignature
           nonce <- parseUIntNFromHex
           feeAmount <- parseUIntNFromHex
-          tokenURI <- parseStringFromHex
-          pure $ SignedRelayedMessage { signature, nonce, feeAmount, tokenURI }
+          tokenData <- parseByteStringFromHex
+          pure $ SignedRelayedMessage { signature, nonce, feeAmount, tokenData }
 
 -- this is for a packing a *signed* transfer, e.g., for broadcast over the air. this is more like abi.encodePacked
 packSignedRelayedTransfer :: SignedRelayedTransfer -> BS.ByteString
@@ -162,13 +162,13 @@ parseSignedRelayedTransfer bs = fmapL show ret
 -- this is equivalent to abi.encode(nonce, fee, tokenURI) (not encodePacked!!!)
 -- todo: can i just somehow use the abi encoder without doing this manual offset nonsense (i.e., somehow encode a function without the bytes4 selector?)
 packRelayedMessage :: UnsignedRelayedMessage -> BS.ByteString
-packRelayedMessage (UnsignedRelayedMessage u) = unsafePartialBecause "were just making a bytestring from hexstrings, what could possibly go wrong" fromJust $ BS.fromString (packNonce <> packFee <> packStringOffset <> packTokenURI) BS.Hex
+packRelayedMessage (UnsignedRelayedMessage u) = unsafePartialBecause "were just making a bytestring from hexstrings, what could possibly go wrong" fromJust $ BS.fromString (packNonce <> packFee <> packStringOffset <> packTokenData) BS.Hex
     where packNonce = unHex $ toDataBuilder u.nonce
           packFee = unHex $ toDataBuilder u.feeAmount
           -- we have three parameters before the string data, each blown up to uint256:
           -- nonce (32 -> 256), fee (already 256), the offset into the string (256) == 768 bits == 96 bytes
           packStringOffset = unHex $ uInt256HexBuilder (embed 96)
-          packTokenURI = unHex $ toDataBuilder u.tokenURI
+          packTokenData = unHex $ toDataBuilder u.tokenData
 
 -- this is equivalent to abi.encode(nonce, fee, tokenID, destination) (not encodePacked!!!)
 -- todo: can i just somehow use the abi encoder without doing this manual offset nonsense (i.e., somehow encode a function without the bytes4 selector?)

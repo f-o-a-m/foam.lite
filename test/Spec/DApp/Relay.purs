@@ -19,7 +19,7 @@ import Network.Ethereum.Web3 (class KnownSize, DLProxy(..), UIntN, sizeVal, uInt
 import Test.QuickCheck (arbitrary, randomSeed)
 import Test.QuickCheck.Gen (Gen, listOf, runGen)
 import Test.Spec (Spec, describe, it)
-import Test.Spec.Assertions (shouldEqual)
+import Test.Spec.Assertions (fail, shouldEqual)
 
 relaySpec :: Spec Unit
 relaySpec = describe "DApp.Relay" do
@@ -34,7 +34,9 @@ relaySpec' name gen pack parse = it ("can pack/unpacked SignedRelayed" <> name) 
         pure $ fst $ runGen gen $ { newSeed, size: 100 }
       let encoded = pack msg
           decoded = parse encoded
-      decoded `shouldEqual` Right msg
+      case decoded of
+        Left err -> fail $ "Could not decode SignedRelayed" <> name <> ": " <> err
+        Right decodedMsg -> decodedMsg `shouldEqual` msg
 
 arbHexStringWithByteLength :: Int -> Gen HexString
 arbHexStringWithByteLength len = fromByteString <<< BS.pack <<< List.toUnfoldable <$> listOf len arbitrary
@@ -63,8 +65,8 @@ genSignedRelayedMessage = do
   signature <- arbSignature
   nonce <- arbUIntN
   feeAmount <- arbUIntN
-  tokenURI <- show <$> (arbitrary :: Gen DAppMessage)
-  pure $ SignedRelayedMessage { signature, nonce, feeAmount, tokenURI }
+  tokenData <- BS.toUTF8 <<< show <$> (arbitrary :: Gen DAppMessage)
+  pure $ SignedRelayedMessage { signature, nonce, feeAmount, tokenData }
 
 genSignedRelayedTransfer :: Gen SignedRelayedTransfer
 genSignedRelayedTransfer = do

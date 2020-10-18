@@ -23,7 +23,7 @@ getRelayNonce { nonceOf, checkFrom, checkAt, rnftAddress } = do
 
 recoverRelayedMessageSignerWeb3 :: SignedRelayedMessage -> TransactionOptions NoPay -> ChainCursor -> Web3 (Either CallError Address)
 recoverRelayedMessageSignerWeb3 (SignedRelayedMessage s) txOpts cc = 
-  RNFT.recoverRelayedMessageSigner txOpts cc { signature: packSignature s.signature, feeAmount: (widenUIntN128 s.feeAmount), nonce: s.nonce, tokenURI: s.tokenURI }
+  RNFT.recoverRelayedMessageSigner txOpts cc { signature: packSignature s.signature, feeAmount: (widenUIntN128 s.feeAmount), nonce: s.nonce, tokenData: s.tokenData }
 
 recoverRelayedTransferSignerWeb3 :: SignedRelayedTransfer -> TransactionOptions NoPay -> ChainCursor -> Web3 (Either CallError Address)
 recoverRelayedTransferSignerWeb3 (SignedRelayedTransfer s) txOpts cc = 
@@ -31,7 +31,7 @@ recoverRelayedTransferSignerWeb3 (SignedRelayedTransfer s) txOpts cc =
 
 mintRelayed :: SignedRelayedMessage -> TransactionOptions NoPay -> Web3 HexString
 mintRelayed (SignedRelayedMessage s) txOpts = do
-  RNFT.mintRelayed txOpts { signature: packSignature s.signature, feeAmount: (widenUIntN128 s.feeAmount), nonce: s.nonce, tokenURI: s.tokenURI }
+  RNFT.mintRelayed txOpts { signature: packSignature s.signature, feeAmount: (widenUIntN128 s.feeAmount), nonce: s.nonce, tokenData: s.tokenData }
   
 transferRelayed :: SignedRelayedTransfer -> TransactionOptions NoPay -> Web3 HexString
 transferRelayed (SignedRelayedTransfer s) txOpts = do
