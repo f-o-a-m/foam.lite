@@ -64,7 +64,7 @@ build-app: install ## Build the frontend
 	npm run build-app
 
 serve-app: ## bundle and serve the app
-	npm run bundle-app && npm run browserify && serve dist
+	npm run bundle-app && npm run browserify && npm run serve
 
 deploy-contracts: build-dapp ## Deploy contracts so the server can run
 	npm run deploy-contracts
