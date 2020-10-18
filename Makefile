@@ -1,4 +1,4 @@
-.PHONY: help install build
+.PHONY: help install build-app build-dapp serve-app test-dapp deploy-contracts run-server cliquebait-start cliquebait-stop cliquebait-logs cliquebait-tail cliquebait-restart
 .DEFAULT_GOAL := help
 
 MAKE_PID := $(shell echo $$PPID)
@@ -21,7 +21,7 @@ build-dapp: install ## Build the DApp (contracts, etc.)
 	npm run chanterelle-build
 	npm run build-dapp
 
-test-dapp: build cliquebait-start ## Starts cliquebait if needed and runs the test suite
+test-dapp: build-dapp cliquebait-start ## Starts cliquebait if needed and runs the test suite
 	npm run test-dapp
 
 cliquebait-start: ## Starts a Cliquebait instance in the background
