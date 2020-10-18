@@ -41,11 +41,11 @@ library RelayingUtils {
     struct RelayedMessage {
         uint32 nonce;
         uint256 feeAmount;
-        string tokenURI;
+        bytes tokenData;
     }
 
     function messageHash(RelayedMessage memory message) internal pure returns (bytes32) {
-        bytes memory packedMessage = abi.encode(message.nonce, message.feeAmount, message.tokenURI);
+        bytes memory packedMessage = abi.encode(message.nonce, message.feeAmount, message.tokenData);
         return keccak256(packedMessage);
     }
 
