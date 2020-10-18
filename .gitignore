@@ -15,5 +15,6 @@ package-lock.json
 /.spago/
 */.spago/
 */output/
+dapp/Contracts/**/*.purs
 dist/bundle.js
 
