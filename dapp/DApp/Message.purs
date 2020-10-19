@@ -4,6 +4,7 @@ import Prelude
 
 import Control.Alt ((<|>))
 import Data.Array as Array
+import Data.ByteString as BS
 import Data.Either (Either)
 import Data.List (toUnfoldable) as List
 import Data.Maybe (maybe)
@@ -27,6 +28,9 @@ instance showDAppMessage :: Show DAppMessage where
   show (Location { lat, lon }) = "L:" <> show lat <> "," <> show lon
   show (ArbitraryString s) = "A:" <> s
   show (LocationWithArbitrary { lat, lon, arbStr }) = "M:"  <> show lat <> "," <> show lon <> "," <> arbStr
+
+packDAppMessage :: DAppMessage -> BS.ByteString
+packDAppMessage = BS.toUTF8 <<< show
 
 parseDAppMessage :: String -> Either ParseError DAppMessage
 parseDAppMessage = flip runParser $ (parseArbitrary <|> parseLocationWithArbitrary <|> parseLocation <|> (fail "Unparsable DAppMessage"))

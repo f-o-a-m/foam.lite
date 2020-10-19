@@ -5,7 +5,7 @@ import Prelude
 import Control.Monad.Error.Class (throwError)
 import Data.Argonaut (class EncodeJson, encodeJson)
 import Data.Array (replicate)
-import Data.ByteString (ByteString, Encoding(Hex, UTF8), fromString, length, singleton, toString) as BS
+import Data.ByteString (ByteString, Encoding(Hex), fromString, singleton, toString) as BS
 import Data.Either (Either)
 import Data.EitherR (fmapL)
 import Data.Identity (Identity(..))
@@ -16,7 +16,7 @@ import Effect.Exception (error)
 import Network.Ethereum.Core.BigNumber as BigNumber
 import Network.Ethereum.Core.HexString (HexString, fromByteString, mkHexString, toBigNumber, toByteString, unHex)
 import Network.Ethereum.Core.Keccak256 (keccak256)
-import Network.Ethereum.Core.Signatures (Address, PrivateKey, Signature(..), mkAddress, signMessage, unAddress)
+import Network.Ethereum.Core.Signatures (Address, PrivateKey, Signature(..), mkAddress, signMessage, toEthSignedMessage, unAddress)
 import Network.Ethereum.Web3 (class KnownSize, DLProxy(..), UIntN, Web3, embed, sizeVal, uIntNFromBigNumber, unUIntN)
 import Network.Ethereum.Web3.Api (personal_sign)
 import Network.Ethereum.Web3.Solidity (toDataBuilder)
@@ -185,24 +185,19 @@ hashRelayedMessage = keccak256 <<< packRelayedMessage
 hashRelayedTransfer :: UnsignedRelayedTransfer -> BS.ByteString
 hashRelayedTransfer = keccak256 <<< packRelayedTransfer
 
-toEthSignedMessage :: BS.ByteString -> BS.ByteString
-toEthSignedMessage bs =
-  let x19 = BS.singleton $ mkQuotient 25
-      pfx = unsafePartialBecause "we're packing a known good prefix into a bytestring" fromJust $ BS.fromString "Ethereum Signed Message:\n" BS.UTF8
-      lenStr = unsafePartialBecause "we're doing a BS.fromString <<< show Int" fromJust <<< flip BS.fromString BS.UTF8 <<< show <<< BS.length
-   in x19 <> pfx <> lenStr bs <> bs -- 25 = 0x19 (i.e \x19)
-
 -- todo: this probably needs to sign keccak256("\x19Ethereum Signed Message:\n32" + <hashRelayedMessage>) like personal_sign does...
 signRelayedMessage :: PrivateKey -> UnsignedRelayedMessage -> SignedRelayedMessage
 signRelayedMessage prk urm@(UnsignedRelayedMessage u) =
-  let Signature signature = signMessage prk (keccak256 <<< toEthSignedMessage $ hashRelayedMessage urm)
+  let ethSignedMessage = unsafePartialBecause "toEthSignedMessage of a hash shouldn't ever fail" fromJust $ toEthSignedMessage $ hashRelayedMessage urm
+      Signature signature = signMessage prk (keccak256 ethSignedMessage)
       fixedSignature = Signature { r: signature.r, s: signature.s, v: signature.v + 27 } -- ethereum sigs use v=27 or v=28 instead of 0/1
       in SignedRelayedMessage (Record.insert (SProxy :: SProxy "signature") fixedSignature u)
 
 -- todo: this probably needs to sign keccak256("\x19Ethereum Signed Message:\n32" + <hashRelayedMessage>) like personal_sign does...
 signRelayedTransfer :: PrivateKey -> UnsignedRelayedTransfer -> SignedRelayedTransfer
 signRelayedTransfer prk urt@(UnsignedRelayedTransfer u) =
-  let Signature signature = signMessage prk (keccak256 <<< toEthSignedMessage $ hashRelayedTransfer urt)
+  let ethSignedMessage = unsafePartialBecause "toEthSignedMessage of a hash shouldn't ever fail" fromJust $ toEthSignedMessage $ hashRelayedTransfer urt
+      Signature signature = signMessage prk (keccak256 ethSignedMessage)
       fixedSignature = Signature { r: signature.r, s: signature.s, v: signature.v + 27 } -- ethereum sigs use v=27 or v=28 instead of 0/1
       in SignedRelayedTransfer (Record.insert (SProxy :: SProxy "signature") fixedSignature u)
 
