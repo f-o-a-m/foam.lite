@@ -2,6 +2,11 @@ module Main where
 
 import Prelude
 
+import Affjax as AF
+import Affjax.StatusCode (StatusCode(..))
+import Affjax.RequestBody as RequestBody
+import Affjax.ResponseFormat as ResponseFormat
+import Chanterelle.Internal.Logging (LogLevel(..), log)
 import Control.Alt ((<|>))
 import Control.Monad.Error.Class (throwError)
 import DApp.Message (DAppMessage(..), packDAppMessage, parseDAppMessage)
@@ -11,12 +16,13 @@ import Data.Either (Either(..), fromRight, note)
 import Data.EitherR (fmapL)
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String.Regex as Regex
-import Data.Symbol (SProxy(..))
 import Effect (Effect)
+import Effect.Aff (launchAff_)
+import Effect.Class (liftEffect)
 import Effect.Console as Console
 import Effect.Exception (error)
 import Network.Ethereum.Core.BigNumber (BigNumber, decimal, hexadecimal, parseBigNumber)
-import Network.Ethereum.Core.HexString (HexString, fromByteString, mkHexString, toByteString)
+import Network.Ethereum.Core.HexString (HexString, fromByteString, mkHexString, toByteString, unHex)
 import Network.Ethereum.Core.Signatures (Address, PrivateKey, generatePrivateKey, mkAddress, mkPrivateKey, privateToAddress)
 import Network.Ethereum.Web3 (class KnownSize, DLProxy, UIntN, sizeVal, uIntNFromBigNumber)
 import Network.Ethereum.Web3.Solidity.Sizes (S128, S32, s128, s32)
@@ -26,7 +32,6 @@ import Node.Process as NP
 import Node.Stream as NS
 import Options.Applicative (CommandFields, Mod, Parser, ReadM, argument, command, eitherReader, execParser, flag', fullDesc, header, help, helper, info, long, metavar, number, option, progDesc, readerError, short, strOption, subparser, (<**>))
 import Partial.Unsafe (unsafePartialBecause)
-import Record as Record
 
 data Subcommand = SignTransfer SignTransferOptions
                 | SignMint SignMintOptions
@@ -43,6 +48,12 @@ readFileDataSource = eitherReader (Right <<< match)
 
 readEncodedDAppMessage :: ReadM DAppMessage
 readEncodedDAppMessage = eitherReader (fmapL show <<< parseDAppMessage)
+
+maybeParser :: forall a. Parser a -> Parser (Maybe a)
+maybeParser p = (Just <$> p) <|> (pure Nothing)
+
+parseTransmitEndpoint :: Parser (Maybe String)
+parseTransmitEndpoint = maybeParser $ strOption (long "transmit" <> short 'X' <> metavar "URL" <> help "Post signed transaction to a transmission endpoint")
 
 parseDataSource :: Parser DataSource
 parseDataSource = (parseStdinFlag <|> parseFileFlag <|> parseHexDataFlag <|> parseEncodedDAppMessage <|> parseSuppliedDAppMessage)
@@ -68,12 +79,14 @@ newtype SignTransferOptions =
                       , feeAmount :: UIntN S128
                       , tokenID :: UIntN S32
                       , destination :: Address
+                      , transmitEndpoint :: Maybe String
                       }
 newtype SignMintOptions = 
   SignMintOptions { privateKey :: PrivateKey 
                   , nonce :: UIntN S32
                   , feeAmount :: UIntN S128
                   , dataSource :: DataSource
+                  , transmitEndpoint :: Maybe String
                   }
 
 newtype DecodeOptions =
@@ -116,7 +129,8 @@ parseSignTransferOptions = ado
     feeAmount <- option (readUIntN s128) (long "fee-amount" <> short 'f' <> metavar "BIGNUM" <> help "fee amount to pay relayer")
     tokenID <- option (readUIntN s32) (long "token-id" <> short 'i' <> metavar "BIGNUM" <> help "token ID to transfer")
     destination <- option readAddress (long "destination" <> short 'd' <> metavar "ADDRESS" <> help "destination address of token")
-    in SignTransferOptions { privateKey, nonce, feeAmount, tokenID, destination }
+    transmitEndpoint <- parseTransmitEndpoint
+    in SignTransferOptions { privateKey, nonce, feeAmount, tokenID, destination, transmitEndpoint }
 
 
 parseSignMintOptions :: Parser SignMintOptions
@@ -125,7 +139,8 @@ parseSignMintOptions = ado
     nonce <- option (readUIntN s32) (long "nonce" <> short 'n' <> metavar "BIGNUM" <> help "nonce to use for message")
     feeAmount <- option (readUIntN s128) (long "fee-amount" <> short 'f' <> metavar "BIGNUM" <> help "fee amount to pay relayer")
     dataSource <- parseDataSource
-    in SignMintOptions { privateKey, nonce, feeAmount, dataSource }
+    transmitEndpoint <- parseTransmitEndpoint
+    in SignMintOptions { privateKey, nonce, feeAmount, dataSource, transmitEndpoint }
 
 parseDecodeOptions :: Parser DecodeOptions
 parseDecodeOptions = pure $ DecodeOptions {}
@@ -153,20 +168,35 @@ readDataSource (File fp) = unsafeFreeze <$> FS.readFile fp
 readDataSource (Raw bs) = pure bs
 readDataSource (SuppliedDAppMessage dm) = pure $ packDAppMessage dm
 
+transmitMessageIfRequested :: Maybe String -> HexString -> Effect Unit
+transmitMessageIfRequested mEP hex = launchAff_ do
+  let rawBody = unHex hex
+  liftEffect $ Console.log rawBody
+  case mEP of
+    Nothing -> pure unit
+    Just ep -> do
+      res <- AF.post ResponseFormat.string ep (Just $ RequestBody.string rawBody)
+      case res of
+        Left err -> throwError $ error $ AF.printError err
+        Right ({ body, status }) ->
+          if status == StatusCode 200
+          then liftEffect $ Console.log $ "server replied: " <> body
+          else throwError $ error $ "Got status " <> show status <> ": " <> body
+
 runHelper :: Subcommand -> Effect Unit
-runHelper (SignTransfer (SignTransferOptions t)) = do
-  let unsigned = UnsignedRelayedTransfer (Record.delete (SProxy :: SProxy "privateKey") t)
-      signed = signRelayedTransfer t.privateKey unsigned
+runHelper (SignTransfer (SignTransferOptions { privateKey, nonce, feeAmount, tokenID, destination, transmitEndpoint })) = do
+  let unsigned = UnsignedRelayedTransfer { nonce, feeAmount, tokenID, destination }
+      signed = signRelayedTransfer privateKey unsigned
       packed = packSignedRelayedTransfer signed
       hex = fromByteString packed
-  Console.log (show hex)
-runHelper (SignMint (SignMintOptions { privateKey, nonce, feeAmount, dataSource })) = do
+  transmitMessageIfRequested transmitEndpoint hex
+runHelper (SignMint (SignMintOptions { privateKey, nonce, feeAmount, dataSource, transmitEndpoint })) = do
   tokenData <- readDataSource dataSource
   let unsigned = UnsignedRelayedMessage { nonce, feeAmount, tokenData }
       signed = signRelayedMessage privateKey unsigned
       packed = packSignedRelayedMessage signed
       hex = fromByteString packed
-  Console.log (show hex)
+  transmitMessageIfRequested transmitEndpoint hex
 runHelper (Decode _) = Console.log "todo"
 runHelper GeneratePrivateKey = Console.log <<< show =<< generatePrivateKey
 runHelper (PrivateToAddress private) = Console.log <<< show $ privateToAddress private
