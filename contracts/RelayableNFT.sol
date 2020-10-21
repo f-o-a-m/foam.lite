@@ -189,6 +189,18 @@ contract RelayableNFT is ERC721Burnable {
         _tokenDatas[tokenId] = _tokenData;
     }
 
+    /**
+     * @dev gets the the tokenData of `tokenID`
+     *
+     * Requirements:
+     *
+     * - `tokenId` must exist
+     */
+    function tokenData(uint256 tokenId) public view returns (bytes memory) {
+        require(_exists(tokenId), "RelayableNFT: Data get of nonexistent token");
+        return _tokenDatas[tokenId];
+    }
+
     function _burn(uint256 tokenId) internal virtual override {
         super._burn(tokenId);
         if (_tokenDatas[tokenId].length != 0) {
