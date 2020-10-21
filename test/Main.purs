@@ -25,9 +25,9 @@ main :: Effect Unit
 main = launchAff_ do
   nodeUrl <- liftEffect $ fromMaybe "http://localhost:8545" <$> lookupEnv "NODE_URL"
   testConfig <- buildTestConfig nodeUrl 60 deployScript
-  Console.log $ unsafeCoerce testConfig
   privateKey <- liftEffect generatePrivateKey
   let specConfig = testConfigToSpecConfig testConfig privateKey
+  Console.log $ unsafeCoerce specConfig
   runSpec' defaultConfig {timeout = Just (fromDuration $ Minutes 20.0) } [consoleReporter] do
     DAppSpecs.messageSpec
     DAppSpecs.relaySpec
