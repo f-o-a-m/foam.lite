@@ -273,18 +273,18 @@ derive instance genericDecodedMessage :: Generic DecodedMessage _
 instance showDecodedMessage :: Show DecodedMessage where
   show = genericShow
 
-data MessageInterpretation a = Interpreted a | Uninterpreted BS.ByteString
+data MessageInterpretation a = Interpreted a BS.ByteString | Uninterpreted BS.ByteString
 derive instance genericMessageInterpretation :: Generic (MessageInterpretation a) _
 instance showMessageInterpretation :: Show a => Show (MessageInterpretation a) where
   show = genericShow
 
 instance encodeJsonMessageInterpretation :: EncodeJson a => EncodeJson (MessageInterpretation a) where
-  encodeJson (Interpreted a) = encodeJson a
-  encodeJson (Uninterpreted b) = encodeJson (fromByteString b)
+  encodeJson (Interpreted a rawData) = encodeJson { raw: (fromByteString rawData), interpreted: a }
+  encodeJson (Uninterpreted rawData) = encodeJson { raw: (fromByteString rawData) }
 
 interpretRelayedMessage :: forall i. (BS.ByteString -> Maybe i) -> SignedRelayedMessage -> SignedInterpretedMessage i
 interpretRelayedMessage interpreter (SignedRelayedMessage m) =
-  let runInterpreter tokenData = maybe (Uninterpreted tokenData) Interpreted (interpreter tokenData)
+  let runInterpreter tokenData = maybe (Uninterpreted tokenData) (flip Interpreted tokenData) (interpreter tokenData)
    in SignedInterpretedMessage (Record.modify tokenDataProxy runInterpreter m)  
 
 data InterpretedDecodedMessage i =

@@ -3,15 +3,17 @@ module Main where
 import Prelude
 
 import Affjax as AF
-import Affjax.StatusCode (StatusCode(..))
 import Affjax.RequestBody as RequestBody
 import Affjax.ResponseFormat as ResponseFormat
-import Chanterelle.Internal.Logging (LogLevel(..), log)
+import Affjax.StatusCode (StatusCode(..))
 import Control.Alt ((<|>))
+import Control.Error.Util (hush)
 import Control.Monad.Error.Class (throwError)
 import DApp.Message (DAppMessage(..), packDAppMessage, parseDAppMessage)
-import DApp.Relay (UnsignedRelayedMessage(..), UnsignedRelayedTransfer(..), packSignedRelayedMessage, packSignedRelayedTransfer, signRelayedMessage, signRelayedTransfer)
-import Data.ByteString (ByteString, unsafeFreeze)
+import DApp.Relay (UnsignedRelayedMessage(..), UnsignedRelayedTransfer(..), decodePackedMessage, interpretDecodedMessage, packSignedRelayedMessage, packSignedRelayedTransfer, signRelayedMessage, signRelayedTransfer)
+import Data.Argonaut (encodeJson)
+import Data.Argonaut.Core (stringifyWithIndent)
+import Data.ByteString (ByteString, fromUTF8, unsafeFreeze)
 import Data.Either (Either(..), fromRight, note)
 import Data.EitherR (fmapL)
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
@@ -39,7 +41,8 @@ data Subcommand = SignTransfer SignTransferOptions
                 | GeneratePrivateKey
                 | PrivateToAddress PrivateKey
 
-data DataSource = Stdin | File FilePath | Raw ByteString | SuppliedDAppMessage DAppMessage
+data DataSource = Stdin | File FilePath | Raw ByteString
+data DataSource' = DataSource DataSource | SuppliedDAppMessage DAppMessage
 
 readFileDataSource :: ReadM DataSource
 readFileDataSource = eitherReader (Right <<< match)
@@ -55,12 +58,15 @@ maybeParser p = (Just <$> p) <|> (pure Nothing)
 parseTransmitEndpoint :: Parser (Maybe String)
 parseTransmitEndpoint = maybeParser $ strOption (long "transmit" <> short 'X' <> metavar "URL" <> help "Post signed transaction to a transmission endpoint")
 
-parseDataSource :: Parser DataSource
-parseDataSource = (parseStdinFlag <|> parseFileFlag <|> parseHexDataFlag <|> parseEncodedDAppMessage <|> parseSuppliedDAppMessage)
-  where parseStdinFlag = flag' Stdin (long "stdin" <> short 's' <> help "read minting data from stdin")
-        parseFileFlag = option readFileDataSource (long "file" <> short 'f' <> metavar "file" <> help "read minting data from a file (`-f -` is also stdin)")
-        parseHexDataFlag = option (Raw <<< toByteString <$> readHexString) (long "hex" <> short 'x' <> metavar "HEX" <> help "read minting data from a HexString")
-        parseEncodedDAppMessage = option (SuppliedDAppMessage <$> readEncodedDAppMessage) (long "message" <> short 'm' <> metavar "DAPPMSG" <> help "use an encoded DAppMessage")
+parseDataSource :: String -> Parser DataSource
+parseDataSource dataType = parseStdinFlag <|> parseFileFlag <|> parseHexDataFlag
+  where parseStdinFlag = flag' Stdin (long "stdin" <> short 's' <> help ("read " <> dataType <> " data from stdin"))
+        parseFileFlag = option readFileDataSource (long "file" <> short 'f' <> metavar "file" <> help ("read " <> dataType <> " data from a file (`-f -` is also stdin)"))
+        parseHexDataFlag = option (Raw <<< toByteString <$> readHexString) (long "hex" <> short 'x' <> metavar "HEX" <> help ("read " <> dataType <> " data from a HexString"))
+
+parseDataSource' :: Parser DataSource'
+parseDataSource' = (DataSource <$> parseDataSource "minting") <|> parseEncodedDAppMessage <|> parseSuppliedDAppMessage
+  where parseEncodedDAppMessage = option (SuppliedDAppMessage <$> readEncodedDAppMessage) (long "message" <> short 'm' <> metavar "DAPPMSG" <> help "use an encoded DAppMessage")
         parseSuppliedDAppMessage = SuppliedDAppMessage <$> (parseLocationWithArbitraryDAppMessage <|> (Location <$> parseLocationDAppMessage)<|> (ArbitraryString <$> parseArbitraryDAppMessage))
         parseArbitraryDAppMessage = (strOption (long "arb" <> short 'a' <> help "make an arbitrary-string DAppMessage"))
         parseLocationDAppMessage = ado
@@ -85,12 +91,12 @@ newtype SignMintOptions =
   SignMintOptions { privateKey :: PrivateKey 
                   , nonce :: UIntN S32
                   , feeAmount :: UIntN S128
-                  , dataSource :: DataSource
+                  , dataSource :: DataSource'
                   , transmitEndpoint :: Maybe String
                   }
 
 newtype DecodeOptions =
-  DecodeOptions { }
+  DecodeOptions DataSource
 
 readHexString :: ReadM HexString
 readHexString = eitherReader (note "Couldn't make a valid HexString from the supplied value" <<< mkHexString)
@@ -138,12 +144,12 @@ parseSignMintOptions = ado
     privateKey <- option readPrivateKey (long "private-key" <> short 'p' <> metavar "HEX" <> help "private key to sign with")
     nonce <- option (readUIntN s32) (long "nonce" <> short 'n' <> metavar "BIGNUM" <> help "nonce to use for message")
     feeAmount <- option (readUIntN s128) (long "fee-amount" <> short 'f' <> metavar "BIGNUM" <> help "fee amount to pay relayer")
-    dataSource <- parseDataSource
+    dataSource <- parseDataSource'
     transmitEndpoint <- parseTransmitEndpoint
     in SignMintOptions { privateKey, nonce, feeAmount, dataSource, transmitEndpoint }
 
 parseDecodeOptions :: Parser DecodeOptions
-parseDecodeOptions = pure $ DecodeOptions {}
+parseDecodeOptions = DecodeOptions <$> parseDataSource "signed message"
 
 parseSubcommand :: Parser Subcommand
 parseSubcommand = subparser 
@@ -166,7 +172,6 @@ readDataSource :: DataSource -> Effect ByteString
 readDataSource Stdin = maybe (throwError $ error "Couldn't read anything from `stdin`")  (pure <<< unsafeFreeze) =<< NS.read NP.stdin Nothing
 readDataSource (File fp) = unsafeFreeze <$> FS.readFile fp
 readDataSource (Raw bs) = pure bs
-readDataSource (SuppliedDAppMessage dm) = pure $ packDAppMessage dm
 
 transmitMessageIfRequested :: Maybe String -> HexString -> Effect Unit
 transmitMessageIfRequested mEP hex = launchAff_ do
@@ -191,12 +196,17 @@ runHelper (SignTransfer (SignTransferOptions { privateKey, nonce, feeAmount, tok
       hex = fromByteString packed
   transmitMessageIfRequested transmitEndpoint hex
 runHelper (SignMint (SignMintOptions { privateKey, nonce, feeAmount, dataSource, transmitEndpoint })) = do
-  tokenData <- readDataSource dataSource
+  tokenData <- case dataSource of
+    DataSource ds -> readDataSource ds
+    SuppliedDAppMessage m -> pure (packDAppMessage m)
   let unsigned = UnsignedRelayedMessage { nonce, feeAmount, tokenData }
       signed = signRelayedMessage privateKey unsigned
       packed = packSignedRelayedMessage signed
       hex = fromByteString packed
   transmitMessageIfRequested transmitEndpoint hex
-runHelper (Decode _) = Console.log "todo"
+runHelper (Decode (DecodeOptions dataSource)) = do
+  msg <- readDataSource dataSource
+  let interpretedMsg = interpretDecodedMessage (hush <<< parseDAppMessage <<< fromUTF8) <$> decodePackedMessage msg
+  Console.log <<< stringifyWithIndent 4 $ encodeJson interpretedMsg
 runHelper GeneratePrivateKey = Console.log <<< show =<< generatePrivateKey
 runHelper (PrivateToAddress private) = Console.log <<< show $ privateToAddress private
