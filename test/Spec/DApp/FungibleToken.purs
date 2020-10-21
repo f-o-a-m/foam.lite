@@ -6,14 +6,18 @@ import Chanterelle.Internal.Logging (LogLevel(..), log)
 import Chanterelle.Internal.Utils (pollTransactionReceipt)
 import Contracts.FungibleToken as FT
 import DApp.Deploy.ContractConfig (DeployResults)
-import DApp.Util (makePayEthTx, makeTxOpts)
+import DApp.Util (makePayEthTx, makeTxOpts, signApprovalTx)
 import Data.Array as Array
+import Data.Int as Int
+import Data.Lens ((?~))
+import Data.Maybe (fromMaybe, maybe)
 import Data.Traversable (for, for_)
-import Effect.Aff (joinFiber)
+import Effect.Aff (error, joinFiber, throwError)
 import Effect.Aff.Class (liftAff)
 import Network.Ethereum.Core.BigNumber (embed, divide)
-import Network.Ethereum.Web3 (ChainCursor(..), Ether, TransactionReceipt(..), TransactionStatus(..), UIntN, Value, Wei, convert, forkWeb3, mkValue, runWeb3, unUIntN)
-import Network.Ethereum.Web3.Api (eth_getBalance, eth_sendTransaction)
+import Network.Ethereum.Core.Signatures (ChainId(..))
+import Network.Ethereum.Web3 (Block(..), ChainCursor(..), Ether, TransactionReceipt(..), TransactionStatus(..), UIntN, Value, Wei, _gas, _gasPrice, _nonce, _to, convert, defaultTransactionOptions, forkWeb3, mkValue, runWeb3, unUIntN)
+import Network.Ethereum.Web3.Api (eth_gasPrice, eth_getBalance, eth_getBlockByNumber, eth_getTransactionCount, eth_sendRawTransaction, eth_sendTransaction, net_version)
 import Network.Ethereum.Web3.Solidity.Sizes (S256)
 import Spec.DApp.Common (SpecConfig)
 import Spec.Helpers (expectRight, expectRight', expectWeb3', forceUIntN)
@@ -38,7 +42,7 @@ fungibleTokenSpec { provider, primaryAccount, secondaryAccounts, fungibleToken, 
       bal <- expectRight' =<< FT.balanceOf txOpts Latest { account: secondaryAccount }
       bal `shouldSatisfy` (_ >= evenlyDistributedSupply)
     for_ pars $ \par -> joinFiber par >>= expectRight
-      
+
   it "can approve all Web3 accounts to spend with the RelayableNFT contract" do
     let allAccounts = Array.cons primaryAccount secondaryAccounts
     pars <- for allAccounts $ \account -> forkWeb3 provider do
@@ -66,13 +70,16 @@ fungibleTokenSpec { provider, primaryAccount, secondaryAccounts, fungibleToken, 
       balETH <- eth_getBalance nonWeb3Account.address Latest 
       -- theres no way to get the bignumber out of a Value, so this should suffice
       (show balETH) `shouldEqual` (show weiToSend)
-      txhAAA <- FT.approveForAnyone txOpts { owner: nonWeb3Account.address, spender: relayableNFT.deployAddress, amount: evenlyDistributedSupply}
-      TransactionReceipt txrAAA <- pollTransactionReceipt txhAAA provider
-      txrAAA.status `shouldEqual` Succeeded
+      chainID <- maybe (throwError $ error "Chain ID wasn't an Int!") pure =<< (map ChainId <<< Int.fromString <$> net_version)
+      userNonce <- eth_getTransactionCount nonWeb3Account.address Latest
+      gasPrice <- eth_gasPrice
+      (Block block) <- eth_getBlockByNumber Latest
+      let baseTxOpts = defaultTransactionOptions # _nonce ?~ userNonce
+                                                 # _to ?~ fungibleToken.deployAddress
+                                                 # _gasPrice ?~ gasPrice
+                                                 # _gas ?~ (block.gasLimit / embed 4)
+          approveTx = signApprovalTx nonWeb3Account.prv chainID baseTxOpts { spender: relayableNFT.deployAddress, amount: evenlyDistributedSupply }
+      txhApprove <- eth_sendRawTransaction approveTx
+      TransactionReceipt txrApprove <- pollTransactionReceipt txhApprove provider
+      txrApprove.status `shouldEqual` Succeeded
     expectRight res
-
-
-
-
-      
-    
