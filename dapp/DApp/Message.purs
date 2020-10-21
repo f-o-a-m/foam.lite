@@ -3,9 +3,11 @@ module DApp.Message where
 import Prelude
 
 import Control.Alt ((<|>))
+import Data.Argonaut (class EncodeJson, encodeJson)
 import Data.Array as Array
 import Data.ByteString as BS
 import Data.Either (Either)
+import Data.Generic.Rep (class Generic)
 import Data.List (toUnfoldable) as List
 import Data.Maybe (maybe)
 import Data.NonEmpty as NE
@@ -20,14 +22,20 @@ import Text.Parsing.Parser.String (anyChar, char, eof, string)
 data DAppMessage =
     Location { lat :: Number, lon :: Number }
   | ArbitraryString String
-  | LocationWithArbitrary { lat :: Number, lon :: Number, arbStr :: String }
+  | LocationWithArbitrary { lat :: Number, lon :: Number, string :: String }
+
+instance encodeJsonDAppMessage :: EncodeJson DAppMessage where
+  encodeJson (Location l) = encodeJson l
+  encodeJson (ArbitraryString s) = encodeJson { string: s }
+  encodeJson (LocationWithArbitrary la) = encodeJson la
 
 derive instance eqDAppMessage :: Eq DAppMessage
 
+derive instance genericDAppMessage :: Generic DAppMessage _
 instance showDAppMessage :: Show DAppMessage where
   show (Location { lat, lon }) = "L:" <> show lat <> "," <> show lon
   show (ArbitraryString s) = "A:" <> s
-  show (LocationWithArbitrary { lat, lon, arbStr }) = "M:"  <> show lat <> "," <> show lon <> "," <> arbStr
+  show (LocationWithArbitrary { lat, lon, string }) = "M:"  <> show lat <> "," <> show lon <> "," <> string
 
 packDAppMessage :: DAppMessage -> BS.ByteString
 packDAppMessage = BS.toUTF8 <<< show
@@ -50,8 +58,8 @@ parseDAppMessage = flip runParser $ (parseArbitrary <|> parseLocationWithArbitra
           void $ string "M:"
           lat <- (parseNumber "latitude") =<< many1Till anyChar (char ',')
           lon <- (parseNumber "longitude") =<< many1Till anyChar (char ',')
-          arbStr <- remainingString
-          pure $ LocationWithArbitrary { lat, lon, arbStr }
+          string <- remainingString
+          pure $ LocationWithArbitrary { lat, lon, string }
 
 instance arbitraryDAppMessage :: Arbitrary DAppMessage where
   arbitrary = do
@@ -75,7 +83,7 @@ instance arbitraryDAppMessage :: Arbitrary DAppMessage where
       genLocationWithArb = do
         lat <- arbitrary
         lon <- arbitrary
-        arbStr <- genArbStr
-        pure $ LocationWithArbitrary { lat, lon, arbStr }
+        string <- genArbStr
+        pure $ LocationWithArbitrary { lat, lon, string }
 
     

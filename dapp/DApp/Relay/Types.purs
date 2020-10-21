@@ -2,12 +2,16 @@ module DApp.Relay.Types where
 
 import Prelude
 
+import Control.Alt ((<|>))
+import Control.Error.Util (hush)
 import Control.Monad.Error.Class (throwError)
 import Data.Argonaut (class EncodeJson, encodeJson)
 import Data.Array (replicate)
 import Data.ByteString (ByteString, Encoding(Hex), fromString, singleton, toString) as BS
 import Data.Either (Either)
 import Data.EitherR (fmapL)
+import Data.Generic.Rep (class Generic)
+import Data.Generic.Rep.Show (class GenericShow, genericShow, genericShow')
 import Data.Identity (Identity(..))
 import Data.Maybe (Maybe, fromJust, maybe)
 import Data.String as String
@@ -26,27 +30,39 @@ import Network.Ethereum.Web3.Solidity.Sizes (S128, S32, s8)
 import Partial.Unsafe (unsafePartialBecause)
 import Record as Record
 import Text.Parsing.Parser (ParserT, fail, runParserT)
+import Text.Parsing.Parser.String (eof)
 import Type.Quotient (mkQuotient)
 
-type UnsignedRelayedMessageR r = (nonce :: UIntN S32, feeAmount :: UIntN S128, tokenData :: BS.ByteString | r)
-type SignedRelayedMessageR r = UnsignedRelayedMessageR (signature :: Signature | r)
-newtype UnsignedRelayedMessage = UnsignedRelayedMessage (Record (UnsignedRelayedMessageR ()))
-newtype SignedRelayedMessage = SignedRelayedMessage (Record (SignedRelayedMessageR ()))
+type UnsignedRelayedMessageR i r = (nonce :: UIntN S32, feeAmount :: UIntN S128, tokenData :: i | r)
+type SignedRelayedMessageR i r = UnsignedRelayedMessageR i (signature :: Signature | r)
+newtype UnsignedRelayedMessage = UnsignedRelayedMessage (Record (UnsignedRelayedMessageR BS.ByteString ()))
+newtype SignedRelayedMessage = SignedRelayedMessage (Record (SignedRelayedMessageR BS.ByteString ()))
+newtype SignedInterpretedMessage i = SignedInterpretedMessage (Record (SignedRelayedMessageR (MessageInterpretation i) ()))
+
+tokenDataProxy :: SProxy "tokenData"
+tokenDataProxy = SProxy
 
 instance showSignedRelayedMessage :: Show SignedRelayedMessage where
   show (SignedRelayedMessage s) = show s
 
 derive instance eqSignedRelayedMessage :: Eq SignedRelayedMessage
 
+derive instance genericSignedInterpretedMessage :: Generic (SignedInterpretedMessage i) _
+instance showSignedInterpretedMessage :: Show i => Show (SignedInterpretedMessage i) where
+  show = genericShow
+
 instance encodeJsonSignedRelayedMessage :: EncodeJson SignedRelayedMessage where
-  encodeJson (SignedRelayedMessage s) = 
+  encodeJson m = encodeJson (interpretRelayedMessage (pure <<< fromByteString) m)
+
+instance encodeJsonSignedInterpretedMessage :: EncodeJson i => EncodeJson (SignedInterpretedMessage i) where
+  encodeJson (SignedInterpretedMessage s) = 
     let (Signature sig) = s.signature 
      in encodeJson
           {
             signature: { r: sig.r, s: sig.s, v: sig.v },
             nonce: unUIntN s.nonce,
             feeAmount: unUIntN s.feeAmount,
-            tokenData: fromByteString s.tokenData
+            tokenData: encodeJson s.tokenData
           }
 
 type UnsignedRelayedTransferR r = (nonce :: UIntN S32, feeAmount :: UIntN S128, tokenID :: UIntN S32, destination :: Address | r)
@@ -67,7 +83,8 @@ instance encodeJsonSignedRelayedTransfer :: EncodeJson SignedRelayedTransfer whe
             signature: { r: sig.r, s: sig.s, v: sig.v },
             nonce: unUIntN s.nonce,
             feeAmount: unUIntN s.feeAmount,
-            destination: s.destination
+            destination: s.destination,
+            tokenID: unUIntN s.tokenID
           }
 
 packSignature :: Signature -> BS.ByteString
@@ -135,6 +152,7 @@ parseSignedRelayedMessage bs = fmapL show ret
           nonce <- parseUIntNFromHex
           feeAmount <- parseUIntNFromHex
           tokenData <- parseByteStringFromHex
+          eof
           pure $ SignedRelayedMessage { signature, nonce, feeAmount, tokenData }
 
 -- this is for a packing a *signed* transfer, e.g., for broadcast over the air. this is more like abi.encodePacked
@@ -156,6 +174,7 @@ parseSignedRelayedTransfer bs = fmapL show ret
           feeAmount <- parseUIntNFromHex
           tokenID <- parseUIntNFromHex
           destination <- parseAddressHex
+          eof
           pure $ SignedRelayedTransfer { signature, nonce, feeAmount, tokenID, destination }
   
 
@@ -230,4 +249,63 @@ signRelayedTransferWeb3 addr password urt@(UnsignedRelayedTransfer t) = do
   let hashHex = fromByteString $ hashRelayedTransfer urt
   signature <- signWeb3 hashHex addr password
   pure $ SignedRelayedTransfer (Record.insert (SProxy :: SProxy "signature") signature t)
-  
+
+data DecodedMessage = DecodedMint SignedRelayedMessage
+                    | DecodedTransfer SignedRelayedTransfer
+                    | DecodedBoth { mint :: SignedRelayedMessage
+                                  , transfer :: SignedRelayedTransfer
+                                  }
+
+decodePackedMessage :: BS.ByteString -> Maybe DecodedMessage
+decodePackedMessage msg = 
+  let asMint = hush $ parseSignedRelayedMessage msg
+      asTransfer = hush $ parseSignedRelayedTransfer msg
+      mkBoth mint transfer = DecodedBoth { mint, transfer }
+      asBoth = mkBoth <$> asMint <*> asTransfer
+   in asBoth <|> (DecodedMint <$> asMint) <|> (DecodedTransfer <$> asTransfer)
+
+instance encodeJsonDecodedMessage :: EncodeJson DecodedMessage where
+  encodeJson (DecodedMint m) = encodeJson { mint: m }
+  encodeJson (DecodedTransfer t) = encodeJson { transfer: t }
+  encodeJson (DecodedBoth b) = encodeJson b
+
+derive instance genericDecodedMessage :: Generic DecodedMessage _
+instance showDecodedMessage :: Show DecodedMessage where
+  show = genericShow
+
+data MessageInterpretation a = Interpreted a | Uninterpreted BS.ByteString
+derive instance genericMessageInterpretation :: Generic (MessageInterpretation a) _
+instance showMessageInterpretation :: Show a => Show (MessageInterpretation a) where
+  show = genericShow
+
+instance encodeJsonMessageInterpretation :: EncodeJson a => EncodeJson (MessageInterpretation a) where
+  encodeJson (Interpreted a) = encodeJson a
+  encodeJson (Uninterpreted b) = encodeJson (fromByteString b)
+
+interpretRelayedMessage :: forall i. (BS.ByteString -> Maybe i) -> SignedRelayedMessage -> SignedInterpretedMessage i
+interpretRelayedMessage interpreter (SignedRelayedMessage m) =
+  let runInterpreter tokenData = maybe (Uninterpreted tokenData) Interpreted (interpreter tokenData)
+   in SignedInterpretedMessage (Record.modify tokenDataProxy runInterpreter m)  
+
+data InterpretedDecodedMessage i =
+    DecodedInterpretedMint (SignedInterpretedMessage i)
+  | DecodedInterpretedTransfer SignedRelayedTransfer
+  | DecodedInterpretedBoth { mint :: (SignedInterpretedMessage i)
+                           , transfer :: SignedRelayedTransfer
+                           }
+
+derive instance genericInterpretedDecodedMessage :: (Generic i rep) => Generic (InterpretedDecodedMessage i) _
+instance showInterpretedDecodedMessage :: (Generic i rep, Show i) => Show (InterpretedDecodedMessage i) where
+  show = genericShow
+
+interpretDecodedMessage :: forall i. (BS.ByteString -> Maybe i) -> DecodedMessage -> InterpretedDecodedMessage i
+interpretDecodedMessage interpreter message =
+  case message of
+        DecodedMint m -> DecodedInterpretedMint $ interpretRelayedMessage interpreter m
+        DecodedTransfer t -> DecodedInterpretedTransfer t
+        DecodedBoth { mint, transfer } -> DecodedInterpretedBoth { mint: interpretRelayedMessage interpreter mint, transfer }
+
+instance encodeJsonInterpretedDecodedMessage :: EncodeJson a => EncodeJson (InterpretedDecodedMessage a) where
+  encodeJson (DecodedInterpretedMint m) = encodeJson { mint: m }
+  encodeJson (DecodedInterpretedTransfer t) = encodeJson { transfer: t }
+  encodeJson (DecodedInterpretedBoth b) = encodeJson b

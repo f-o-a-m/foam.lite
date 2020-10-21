@@ -5,14 +5,13 @@ import Prelude
 import Contracts.RelayableNFT as RNFT
 import Control.Monad.Except (ExceptT, except, throwError, withExceptT)
 import Control.Monad.Reader (ask)
-import DApp.Relay (SignedRelayedMessage, SignedRelayedTransfer(..), mintRelayed, parseSignedRelayedMessage, parseSignedRelayedTransfer, recoverRelayedTransferSignerWeb3, transferRelayed)
+import DApp.Message (DAppMessage, parseDAppMessage)
+import DApp.Relay (SignedRelayedMessage, SignedRelayedTransfer(..), mintRelayed, recoverRelayedTransferSignerWeb3, transferRelayed)
+import DApp.Relay.Types (DecodedMessage(..), InterpretedDecodedMessage, decodePackedMessage, interpretDecodedMessage)
 import DApp.Util (makeTxOpts, widenUIntN32)
-import Data.Argonaut (class DecodeJson, class EncodeJson, decodeJson)
-import Data.Argonaut.Encode.Generic.Rep (genericEncodeJson)
+import Data.Argonaut (class DecodeJson, decodeJson)
 import Data.ByteString as BS
-import Data.Either (Either(..), hush)
-import Data.Generic.Rep (class Generic)
-import Data.Generic.Rep.Show (genericShow)
+import Data.Either (Either(..), either, hush)
 import Data.Maybe (Maybe(..), maybe)
 import Effect.Aff.Class (liftAff)
 import MIME (class FromString, PlainText, fromString, toByteString)
@@ -28,15 +27,6 @@ import Types (AppM)
 
 newtype RelayRequestBody = RelayRequestBody BS.ByteString
 
-data DecodedBody = DecodedMint SignedRelayedMessage | DecodedTransfer SignedRelayedTransfer
-
-instance encodeJsonDecodedBody :: EncodeJson DecodedBody where
-  encodeJson = genericEncodeJson
-
-derive instance genericDecodedBody :: Generic DecodedBody _
-instance showDecodedBody :: Show DecodedBody where
-  show = genericShow
-
 instance decodeJsonRelayRequestBody :: DecodeJson RelayRequestBody where
   decodeJson o = do
     x :: HexString <- decodeJson o
@@ -48,22 +38,13 @@ instance fromStringRelayRequestBody :: FromString RelayRequestBody where
 type SupportedResultMimes = (JSON :<|> PlainText)
 type RelayRoute = "relay" := ("relay" :/ RelaySubroutes)
 type RelaySubroutes =     ("submit" := "submit" :/ ReqBody RelayRequestBody PlainText :> Resource (Post HexString SupportedResultMimes))
-                    :<|>  ("validate" := "validate" :/ ReqBody RelayRequestBody PlainText :> Resource (Post DecodedBody SupportedResultMimes))
-
+                    :<|>  ("validate" := "validate" :/ ReqBody RelayRequestBody PlainText :> Resource (Post (InterpretedDecodedMessage DAppMessage) SupportedResultMimes))
 
 relayRoute :: _
 relayRoute = { 
   "submit": postSubmitRoute,
   "validate": postValidateRoute
 }
-
-type DecodableAsBoth = { mint :: Maybe SignedRelayedMessage, transfer :: Maybe SignedRelayedTransfer }
-
-decodeRelayRequestBody :: RelayRequestBody -> DecodableAsBoth
-decodeRelayRequestBody (RelayRequestBody b) = 
-  let mint = hush $ parseSignedRelayedMessage b
-      transfer = hush $ parseSignedRelayedTransfer b
-   in { mint, transfer }
 
 -- | If we ever run into the *very* unlikely chance that a message can be decoded as both a transfer and a mint
 -- | We check if the *transfer* could potentially be executed (i.e., the recovered signer actually owns the
@@ -81,25 +62,24 @@ validateTransfer srt@(SignedRelayedTransfer t) = do
     Left err -> throwError error500
     Right res' -> pure $ res'.owner == res'.signer
 
-resolveRelayRequestBody :: DecodableAsBoth -> ExceptT HTTPError AppM DecodedBody
-resolveRelayRequestBody { mint: Nothing, transfer: Nothing } = throwError error400
-resolveRelayRequestBody { mint: Just m, transfer: Nothing } = pure $ DecodedMint m
-resolveRelayRequestBody { mint: Nothing, transfer: Just t } = pure $ DecodedTransfer t
-resolveRelayRequestBody { mint: Just mint, transfer: Just transfer } = do
+resolveRelayRequestBody :: Maybe DecodedMessage -> ExceptT HTTPError AppM (Either SignedRelayedMessage SignedRelayedTransfer)
+resolveRelayRequestBody Nothing = throwError error400
+resolveRelayRequestBody (Just (DecodedMint m)) = pure $ Left m
+resolveRelayRequestBody (Just (DecodedTransfer t)) = pure $ Right t
+resolveRelayRequestBody (Just (DecodedBoth { mint, transfer })) = do
   isValidTransfer <- validateTransfer transfer
   pure $ 
     if isValidTransfer
-    then DecodedTransfer transfer
-    else DecodedMint mint
+    then Right transfer
+    else Left mint
 
-bodyToAction :: DecodedBody -> TransactionOptions NoPay -> Web3 HexString
-bodyToAction (DecodedMint m) = mintRelayed m
-bodyToAction (DecodedTransfer t) = transferRelayed t
+bodyToAction :: Either SignedRelayedMessage SignedRelayedTransfer -> TransactionOptions NoPay -> Web3 HexString
+bodyToAction = either mintRelayed transferRelayed
 
 postSubmitRoute :: RelayRequestBody -> { "POST" :: ExceptT HTTPError AppM HexString }
-postSubmitRoute b = {
+postSubmitRoute (RelayRequestBody b) = {
     "POST": do
-      resolved <- resolveRelayRequestBody (decodeRelayRequestBody b)
+      resolved <- resolveRelayRequestBody (decodePackedMessage b)
       { addresses, provider } <- ask
       let txOpts = makeTxOpts { from: addresses.primaryAccount, to: addresses.relayableNFT }
       withExceptT web3ErrorToHTTPError (except =<< liftAff (runWeb3 provider (bodyToAction resolved txOpts)))
@@ -112,6 +92,8 @@ web3ErrorToHTTPError e =
       expandedDetails = maybe showWeb3Error (_ <> ": " <> showWeb3Error) baseError.details
    in baseError { details = Just expandedDetails }
 
-postValidateRoute :: RelayRequestBody -> { "POST" :: ExceptT HTTPError AppM DecodedBody }
-postValidateRoute b = { "POST": resolveRelayRequestBody (decodeRelayRequestBody b) }
+postValidateRoute :: RelayRequestBody -> { "POST" :: ExceptT HTTPError AppM (InterpretedDecodedMessage DAppMessage) }
+postValidateRoute (RelayRequestBody b) = {
+  "POST": maybe (throwError error400) pure (interpretDecodedMessage (hush <<< parseDAppMessage <<< BS.fromUTF8) <$> decodePackedMessage b)
+}
 

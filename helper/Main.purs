@@ -69,8 +69,8 @@ parseDataSource = (parseStdinFlag <|> parseFileFlag <|> parseHexDataFlag <|> par
           in { lat, lon }
         parseLocationWithArbitraryDAppMessage = ado
           { lat, lon } <- parseLocationDAppMessage
-          arbStr <- parseArbitraryDAppMessage
-          in LocationWithArbitrary { arbStr, lat, lon }
+          string <- parseArbitraryDAppMessage
+          in LocationWithArbitrary { string, lat, lon }
 
 
 newtype SignTransferOptions =
