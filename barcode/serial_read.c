@@ -25,14 +25,14 @@ int find_serial(char* destination) {
       }
       if (strstr(dir->d_name, "STM32") == NULL) {
         sprintf(destination, "%s/%s", base_dir, dir->d_name);
-        printf("found candidate %s\n", destination);
+        //printf("found candidate %s\n", destination);
         closedir(d);
         return 0;
       }
     }
     closedir(d);
   }
-  printf("couldnt find a serial port that doesnt have STM32 in the name :(\n");
+  fprintf(stderr,"couldnt find a serial port that doesnt have STM32 in the name :(\n");
   return -1;
 }
 
@@ -40,18 +40,16 @@ void main(void)
 {
         char* serial_path = calloc(2048, sizeof(char));
         if (find_serial(serial_path) != 0) {
-            printf("couldn't autodetect the serial path, expect trouble\n");
+            fprintf(stderr,"couldn't autodetect the serial path, expect trouble\n");
         }
         int fd = open(serial_path, SERIAL_OPENING_FLAGS);/*File Descriptor*/
 
-        printf("\n +----------------------------------+");
-        printf("\n |        Serial Port Read          |");
-        printf("\n +----------------------------------+");
+       
         /*------------------------------- Opening the Serial Port -------------------------------*/
         if(fd == -1)                                    /* Error Checking */
-           printf("\n  Error! in Opening %s  ", serial_path);
+           fprintf(stderr,"\n  Error! in Opening %s  ", serial_path);
         else
-           printf("\n  %s Opened Successfully ", serial_path);
+           fprintf(stderr,"\n  %s Opened Successfully ", serial_path);
 
 
 /*---------- Setting the Attributes of the serial port using termios structure --------- */
@@ -84,28 +82,28 @@ void main(void)
 
 
 	if((tcsetattr(fd,TCSANOW,&SerialPortSettings)) != 0) /* Set the attributes to the termios structure*/
-	    printf("\n  ERROR ! in Setting attributes");
+	    fprintf(stderr,"\n  ERROR ! in Setting attributes");
 	else
-            printf("\n  BaudRate = 115200 \n  StopBits = 1 \n  Parity   = none");
+            fprintf(stderr,"\n  BaudRate = 115200 \n  StopBits = 1 \n  Parity   = none");
 			
         /*------------------------------- Read data from serial port -----------------------------*/
+	while(1)
+	{
+		tcflush(fd, TCIFLUSH);   /* Discards old data in the rx buffer            */
 
-	tcflush(fd, TCIFLUSH);   /* Discards old data in the rx buffer            */
+		char read_buffer[32];   /* Buffer to store the data received              */
+		int  bytes_read = 0;    /* Number of bytes read by the read() system call */
+		int i = 0;
 
-	char read_buffer[32];   /* Buffer to store the data received              */
-	int  bytes_read = 0;    /* Number of bytes read by the read() system call */
-	int i = 0;
-
-	bytes_read = read(fd,&read_buffer,32); /* Read the data                   */
+		bytes_read = read(fd,&read_buffer,32); /* Read the data                   */
 			
-	printf("\n\n  Bytes Rxed -%d", bytes_read); /* Print the number of bytes read */
-	printf("\n\n  ");
+		fprintf(stderr,"\n  Bytes Rxed -%d", bytes_read); /* Print the number of bytes read */
+		fprintf(stderr,"\n  ");
 
-	for(i=0;i<bytes_read;i++)	 /*printing only the received characters*/
-	    printf("%c",read_buffer[i]);
+		for(i=0;i<bytes_read;i++)	 /*printing only the received characters*/
+	    		printf("%c",read_buffer[i]);
+	}
 	
-	printf("\n +----------------------------------+\n\n\n");
-
 	close(fd); /* Close the serial port */
 
 }
