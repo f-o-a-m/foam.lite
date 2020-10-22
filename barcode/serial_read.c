@@ -1,34 +1,59 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <dirent.h>  /* directory listing */
+#include <string.h>  /* c strings */
 #include <fcntl.h>   /* File Control Definitions           */
 #include <termios.h> /* POSIX Terminal Control Definitions */
-#include <unistd.h>  /* UNIX Standard Definitions 	   */ 
+#include <unistd.h>  /* UNIX Standard Definitions          */
 #include <errno.h>   /* ERROR Number Definitions           */
-	
+
+const int SERIAL_OPENING_FLAGS = O_RDWR | O_NOCTTY;
+/* O_RDWR   - Read/Write access to serial port       */
+/* O_NOCTTY - No terminal will control the process   */
+/* Open in blocking mode,read will wait              */
+
+
+int find_serial(char* destination) {
+  DIR *d;
+  struct dirent *dir;
+  const char* base_dir = "/dev/serial/by-id";
+  d = opendir(base_dir);
+  if (d) {
+    while ((dir = readdir(d)) != NULL) {
+      if (strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0) {
+          continue; // skip . and ..
+      }
+      if (strstr(dir->d_name, "STM32") == NULL) {
+        sprintf(destination, "%s/%s", base_dir, dir->d_name);
+        printf("found candidate %s\n", destination);
+        closedir(d);
+        return 0;
+      }
+    }
+    closedir(d);
+  }
+  printf("couldnt find a serial port that doesnt have STM32 in the name :(\n");
+  return -1;
+}
+
 void main(void)
 {
-	int fd;/*File Descriptor*/
-		
-	printf("\n +----------------------------------+");
-	printf("\n |        Serial Port Read          |");
-	printf("\n +----------------------------------+");
+        char* serial_path = calloc(2048, sizeof(char));
+        if (find_serial(serial_path) != 0) {
+            printf("couldn't autodetect the serial path, expect trouble\n");
+        }
+        int fd = open(serial_path, SERIAL_OPENING_FLAGS);/*File Descriptor*/
 
-	/*------------------------------- Opening the Serial Port -------------------------------*/
+        printf("\n +----------------------------------+");
+        printf("\n |        Serial Port Read          |");
+        printf("\n +----------------------------------+");
+        /*------------------------------- Opening the Serial Port -------------------------------*/
+        if(fd == -1)                                    /* Error Checking */
+           printf("\n  Error! in Opening %s  ", serial_path);
+        else
+           printf("\n  %s Opened Successfully ", serial_path);
 
-	/* Change /dev/ttyUSB0 to the one corresponding to your system */
 
-        fd = open("/dev/ttyACM0",O_RDWR | O_NOCTTY);
-		/* O_RDWR   - Read/Write access to serial port       */
-		/* O_NOCTTY - No terminal will control the process   */
-		/* Open in blocking mode,read will wait              */
-									
-									                                        
-	
-       	if(fd == -1)					/* Error Checking */
-       	   printf("\n  Error! in Opening ttyACM0  ");
-       	else
-       	   printf("\n  ttyACM0 Opened Successfully ");
-
-	
 /*---------- Setting the Attributes of the serial port using termios structure --------- */
 		
 	struct termios SerialPortSettings;	/* Create the structure                          */
