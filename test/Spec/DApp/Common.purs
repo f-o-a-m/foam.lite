@@ -18,6 +18,7 @@ type SpecConfig r =
   , secondaryAccounts :: Array Address
   , accountPassword :: Address -> Maybe String
   , nonWeb3Account :: { pub :: PublicKey, prv :: PrivateKey, address :: Address }
+  , secondNonWeb3Account :: { pub :: PublicKey, prv :: PrivateKey, address :: Address }
   | r
   }
 
@@ -26,18 +27,21 @@ testConfigToSpecConfig :: forall r
                         => Row.Lacks "accounts" r
                         => TestConfig r
                         -> PrivateKey
+                        -> PrivateKey
                         -> SpecConfig r
-testConfigToSpecConfig tc nonWeb3Priv =
+testConfigToSpecConfig tc nonWeb3Priv nonWeb3Priv2 =
   let split = unsafePartialBecause "we expect to have multiple accounts" fromJust $ Array.uncons tc.accounts
       primaryAccount = split.head
       secondaryAccounts = split.tail
       -- todo: support getting password from cliquebait etc.
       accountPassword = const (Just "password123")
       tcWithoutAccounts = Record.delete (SProxy :: SProxy "accounts") tc
-      nonWeb3Pub = privateToPublic nonWeb3Priv
-      -- nonWeb3Address = privateToAddress nonWeb3Priv
-      nonWeb3Address = publicToAddress nonWeb3Pub
-      nonWeb3Account = { pub: nonWeb3Pub, prv: nonWeb3Priv, address: nonWeb3Address }
-      specConfigParts = { primaryAccount, secondaryAccounts, accountPassword, nonWeb3Account }
+      mkNonWeb3Account prv =
+        let pub = privateToPublic prv
+            address = publicToAddress pub
+         in { pub, prv, address }
+      nonWeb3Account = mkNonWeb3Account nonWeb3Priv
+      secondNonWeb3Account = mkNonWeb3Account nonWeb3Priv2
+      specConfigParts = { primaryAccount, secondaryAccounts, accountPassword, nonWeb3Account, secondNonWeb3Account }
    in Record.union specConfigParts tcWithoutAccounts
       

@@ -73,16 +73,15 @@ resolveRelayRequestBody (Just (DecodedBoth { mint, transfer })) = do
     then Right transfer
     else Left mint
 
-bodyToAction :: Either SignedRelayedMessage SignedRelayedTransfer -> TransactionOptions NoPay -> Web3 HexString
-bodyToAction = either mintRelayed transferRelayed
+performRelayAction :: Either SignedRelayedMessage SignedRelayedTransfer -> ExceptT HTTPError AppM HexString
+performRelayAction body = do
+  { provider, relayActions } <- ask
+  let action = either relayActions.doMintRelayed relayActions.doTransferRelayed body
+  withExceptT web3ErrorToHTTPError (except =<< liftAff (runWeb3 provider action))
 
 postSubmitRoute :: RelayRequestBody -> { "POST" :: ExceptT HTTPError AppM HexString }
 postSubmitRoute (RelayRequestBody b) = {
-    "POST": do
-      resolved <- resolveRelayRequestBody (decodePackedMessage b)
-      { addresses, provider } <- ask
-      let txOpts = makeTxOpts { from: addresses.primaryAccount, to: addresses.relayableNFT }
-      withExceptT web3ErrorToHTTPError (except =<< liftAff (runWeb3 provider (bodyToAction resolved txOpts)))
+    "POST": resolveRelayRequestBody (decodePackedMessage b) >>= performRelayAction
 }
 
 web3ErrorToHTTPError :: Web3Error -> HTTPError
