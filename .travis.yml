@@ -2,6 +2,10 @@ language: node_js
 dist: trusty
 sudo: required
 node_js: v8.16.1
+addons:
+  apt:
+    packages:
+    - libudev-dev
 services:
   - docker
 install:
