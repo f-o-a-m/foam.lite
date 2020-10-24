@@ -94,7 +94,7 @@ let additions =
         , repo =
             "https://github.com/f-o-a-m/purescript-eth-core.git"
         , version =
-            "v6.0.0"
+            "v6.1.0"
         }
       , coroutine-transducers =
         { dependencies =

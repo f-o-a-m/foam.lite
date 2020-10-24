@@ -1,4 +1,4 @@
-.PHONY: help install build
+.PHONY: help install build-app build-dapp serve-app test-dapp deploy-contracts run-server cliquebait-start cliquebait-stop cliquebait-logs cliquebait-tail cliquebait-restart
 .DEFAULT_GOAL := help
 
 MAKE_PID := $(shell echo $$PPID)
@@ -17,11 +17,11 @@ help: ## Ask for help!
 install: ## Install dependencies
 	npm install & wait
 
-build-dapp: install ## Build ALL the things
+build-dapp: install ## Build the DApp (contracts, etc.)
 	npm run chanterelle-build
 	npm run build-dapp
 
-test-dapp: build cliquebait-start ## Starts cliquebait if needed and runs the test suite
+test-dapp: build-dapp cliquebait-start ## Starts cliquebait if needed and runs the test suite
 	npm run test-dapp
 
 cliquebait-start: ## Starts a Cliquebait instance in the background
@@ -60,8 +60,25 @@ cliquebait-restart: ## Stop and start the background Cliquebait instance
 	@$(MAKE) cliquebait-stop
 	@$(MAKE) cliquebait-start
 
-build-app: ## compile the app
+build-app: install ## Build the frontend
 	npm run build-app
 
 serve-app: ## bundle and serve the app
-	npm run bundle-app && npm run browserify && serve dist
+	npm run bundle-app && npm run browserify && npm run serve
+
+deploy-contracts: build-dapp ## Deploy contracts so the server can run
+	npm run deploy-contracts
+
+run-server: ## Run the relayer server
+	npm run run-server
+
+bundle: ## Bundle the app for distribution
+	rm -rf foam5g.tgz dist/bundle.js dist/helper.js dist/server.js dist/package.json dist/node_modules dist/build
+	mkdir -p dist/build
+	cp build/*.json dist/build
+	npm run bundle-app
+	npm run browserify
+	npm run backend-dist
+	mv dist foam5g
+	tar cvzf foam5g.tgz foam5g
+	mv foam5g dist

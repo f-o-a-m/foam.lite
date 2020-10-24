@@ -24,6 +24,9 @@ contract RelayableNFT is ERC721Burnable {
     // Mapping from token ID to the actor that was responsible for its minting
     EnumerableMap.UintToAddressMap private _tokenMinters;
 
+    // Stores the metadatas associated with minted tokens.
+    mapping (uint256 => bytes) private _tokenDatas;
+
     // An ERC20 for paying fees with when relaying.
     IERC20 private _fungibleToken;
 
@@ -35,29 +38,29 @@ contract RelayableNFT is ERC721Burnable {
         _fungibleToken = fungibleToken;
     }
 
-    function _mintRelayableNFT(address owner, address minter, string memory tokenURI) internal returns (uint256) {
+    function _mintRelayableNFT(address owner, address minter, bytes memory tokenData) internal returns (uint256) {
         _tokenIDs.increment();
 
         uint256 newTokenID = _tokenIDs.current();
         _mint(owner, newTokenID);
         _setTokenMinter(newTokenID, minter);
-        _setTokenURI(newTokenID, tokenURI);
+        _setTokenData(newTokenID, tokenData);
 
         return newTokenID;
     }
 
-    function mint(string memory tokenURI) public returns (uint256) {
-        return _mintRelayableNFT(msg.sender, msg.sender, tokenURI);
+    function mint(bytes memory tokenData) public returns (uint256) {
+        return _mintRelayableNFT(msg.sender, msg.sender, tokenData);
     }
 
-    function mintFor(address owner, string memory tokenURI) public returns (uint256) {
-        return _mintRelayableNFT(owner, msg.sender, tokenURI);
+    function mintFor(address owner, bytes memory tokenData) public returns (uint256) {
+        return _mintRelayableNFT(owner, msg.sender, tokenData);
     }
 
-    function recoverRelayedMessageSigner(bytes memory signature, uint32 nonce, uint256 feeAmount, string memory tokenURI) public pure returns (address) {
+    function recoverRelayedMessageSigner(bytes memory signature, uint32 nonce, uint256 feeAmount, bytes memory tokenData) public pure returns (address) {
         // wrap the params into a relayedMessage
         RelayingUtils.RelayedMessage memory relayedMessage = RelayingUtils.RelayedMessage(
-            { nonce: nonce, feeAmount: feeAmount, tokenURI: tokenURI }
+            { nonce: nonce, feeAmount: feeAmount, tokenData: tokenData }
         );
         return relayedMessage.recoverSigner(signature);
     }
@@ -70,10 +73,10 @@ contract RelayableNFT is ERC721Burnable {
         return relayedTransfer.recoverSigner(signature);
     }
 
-    function relayedMessageSigningHash(uint32 nonce, uint256 feeAmount, string memory tokenURI) public pure returns (bytes32) {
+    function relayedMessageSigningHash(uint32 nonce, uint256 feeAmount, bytes memory tokenData) public pure returns (bytes32) {
         // wrap the params into a relayedMessage
         RelayingUtils.RelayedMessage memory relayedMessage = RelayingUtils.RelayedMessage(
-            { nonce: nonce, feeAmount: feeAmount, tokenURI: tokenURI }
+            { nonce: nonce, feeAmount: feeAmount, tokenData: tokenData }
         );
         return relayedMessage.signingHash();
     }
@@ -86,10 +89,10 @@ contract RelayableNFT is ERC721Burnable {
         return relayedTransfer.signingHash();
     }
 
-    function mintRelayed(bytes memory signature, uint32 nonce, uint256 feeAmount, string memory tokenURI) public returns (uint256) {
+    function mintRelayed(bytes memory signature, uint32 nonce, uint256 feeAmount, bytes memory tokenData) public returns (uint256) {
         // wrap the params into a relayedMessage
         RelayingUtils.RelayedMessage memory relayedMessage = RelayingUtils.RelayedMessage(
-            { nonce: nonce, feeAmount: feeAmount, tokenURI: tokenURI }
+            { nonce: nonce, feeAmount: feeAmount, tokenData: tokenData }
         );
 
         // Get the originator of the message from its signature
@@ -112,7 +115,7 @@ contract RelayableNFT is ERC721Burnable {
             "RelayableNFT: Could not transfer fee from message sender to relayer");
 
         // mint the token
-        uint256 newTokenID = _mintRelayableNFT(owner, relayer, relayedMessage.tokenURI);
+        uint256 newTokenID = _mintRelayableNFT(owner, relayer, relayedMessage.tokenData);
 
         // emit the event
         emit MintedByRelay(owner, relayer, newTokenID);
@@ -172,5 +175,36 @@ contract RelayableNFT is ERC721Burnable {
      */
     function _setTokenMinter(uint256 tokenID, address _tokenMinter) internal virtual {
         _tokenMinters.set(tokenID, _tokenMinter);
+    }
+
+    /**
+     * @dev sets `_tokenData` as the tokenData of `tokenID`
+     *
+     * Requirements:
+     *
+     * - `tokenId` must exist
+     */
+    function _setTokenData(uint256 tokenId, bytes memory _tokenData) internal {
+        require(_exists(tokenId), "RelayableNFT: Data set of nonexistent token");
+        _tokenDatas[tokenId] = _tokenData;
+    }
+
+    /**
+     * @dev gets the the tokenData of `tokenID`
+     *
+     * Requirements:
+     *
+     * - `tokenId` must exist
+     */
+    function tokenData(uint256 tokenId) public view returns (bytes memory) {
+        require(_exists(tokenId), "RelayableNFT: Data get of nonexistent token");
+        return _tokenDatas[tokenId];
+    }
+
+    function _burn(uint256 tokenId) internal virtual override {
+        super._burn(tokenId);
+        if (_tokenDatas[tokenId].length != 0) {
+            delete _tokenDatas[tokenId];
+        }
     }
 }
