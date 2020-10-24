@@ -11,8 +11,8 @@ import Data.Either (Either(..), fromRight)
 import Data.Lens ((?~))
 import Data.Maybe (Maybe(..), fromJust)
 import Data.Validation.Semigroup as V
-import Network.Ethereum.Core.BigNumber (BigNumber, decimal, parseBigNumber)
-import Network.Ethereum.Web3 (class KnownSize, Address, DLProxy(..), HexString, UIntN, _from, _gas, _gasPrice, defaultTransactionOptions, mkAddress, mkHexString, uIntNFromBigNumber)
+import Network.Ethereum.Core.BigNumber (decimal, parseBigNumber)
+import Network.Ethereum.Web3 (class KnownSize, Address, DLProxy, HexString, UIntN, _from, _gas, _gasPrice, defaultTransactionOptions, mkAddress, mkHexString, uIntNFromBigNumber)
 import Network.Ethereum.Web3.Solidity.Sizes (s256)
 import Partial.Unsafe (unsafeCrashWith, unsafePartial)
 

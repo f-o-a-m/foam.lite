@@ -12,7 +12,7 @@ import Data.Lens ((?~), (.~))
 import Data.Maybe (Maybe(..), fromJust, fromMaybe, maybe)
 import Data.Symbol (class IsSymbol, SProxy)
 import Effect.Exception (error)
-import Network.Ethereum.Core.HexString (fromByteString, toByteString)
+import Network.Ethereum.Core.HexString (fromByteString, mkHexString, toByteString)
 import Network.Ethereum.Core.Keccak256 (keccak256)
 import Network.Ethereum.Core.RLP as RLP
 import Network.Ethereum.Core.Signatures (Address, ChainId(..), PrivateKey, Signature(..), addChainIdOffset, privateToAddress, signMessage)
@@ -137,6 +137,35 @@ signABIFn proxy pk chainID (TransactionOptions txOpts) args = fromByteString $ m
         hashedRawTx = keccak256 (makeUnsignedTransactionMessage chainID rawTx)
         sig = addChainIdOffset chainID $ signMessage pk hashedRawTx
 
+signTransaction' :: forall tokenUnit
+                  . TokenUnitSpec (tokenUnit ETHER)
+                 => PrivateKey -> TransactionOptions tokenUnit -> Web3 HexString
+signTransaction' pk txo@(TransactionOptions txOpts) = do
+  gasPriceToUse <- maybe eth_gasPrice pure txOpts.gasPrice
+  nonceToUse <- maybe (eth_getTransactionCount (privateToAddress pk) Latest) pure txOpts.nonce
+  chainId <- maybe (throwError $ error "Couldn't parse the node's chain ID as an Int!") pure =<< (map ChainId <<< Int.fromString <$> net_version)
+  let getEstimatedGas = do
+        let filledFromTxOpts = txo # _from ?~ (privateToAddress pk)
+                                   # _value .~ (convert <$> txOpts.value)
+                                   # _gas .~ Nothing
+                                   # _gasPrice ?~ gasPriceToUse
+                                   # _nonce ?~ nonceToUse
+        nodeEstimate <- eth_estimateGas filledFromTxOpts
+        pure $ nodeEstimate * (embed 125) / (embed 100) -- supply 1.25x the estimate, for safety factor
+  gasToUse <- maybe getEstimatedGas pure txOpts.gas
+  let rawTx =
+          RawTransaction
+              { to: txOpts.to
+              , value: toMinorUnit <$> txOpts.value
+              , gas: gasToUse
+              , gasPrice: gasPriceToUse
+              , data: fromMaybe (unsafePartialBecause "we're making an empty HexString" fromJust $ mkHexString "") txOpts.data
+              , nonce: nonceToUse
+              }
+      hashedRawTx = keccak256 (makeUnsignedTransactionMessage chainId rawTx)
+      sig = addChainIdOffset chainId $ signMessage pk hashedRawTx
+  pure $ fromByteString $ makeSignedTransactionMessage sig rawTx
+
 -- | Signs an ABI call/transaction, filling in unspecified nonce, gasprice, etc. by querying the node
 signABIFn' :: forall selector a name args fields l tokenUnit
             . IsSymbol selector
@@ -149,33 +178,7 @@ signABIFn' :: forall selector a name args fields l tokenUnit
            -> TransactionOptions tokenUnit
            -> Record fields
            -> Web3 HexString
-signABIFn' proxy pk txo@(TransactionOptions txOpts) args = do
-  gasPriceToUse <- maybe eth_gasPrice pure txOpts.gasPrice
-  nonceToUse <- maybe (eth_getTransactionCount (privateToAddress pk) Latest) pure txOpts.nonce
-  chainId <- maybe (throwError $ error "Couldn't parse the node's chain ID as an Int!") pure =<< (map ChainId <<< Int.fromString <$> net_version)
-  let dataField = mkDataField proxy args
-      getEstimatedGas = do
-        let filledFromTxOpts = txo # _from ?~ (privateToAddress pk)
-                                   # _value .~ (convert <$> txOpts.value)
-                                   # _gas .~ Nothing
-                                   # _data ?~ dataField
-                                   # _gasPrice ?~ gasPriceToUse
-                                   # _nonce ?~ nonceToUse
-        nodeEstimate <- eth_estimateGas filledFromTxOpts
-        pure $ nodeEstimate * (embed 125) / (embed 100) -- supply 1.25x the estimate, for safety factor
-  gasToUse <- maybe getEstimatedGas pure txOpts.gas
-  let rawTx =
-          RawTransaction
-              { to: txOpts.to
-              , value: toMinorUnit <$> txOpts.value
-              , gas: gasToUse
-              , gasPrice: gasPriceToUse
-              , data: dataField
-              , nonce: nonceToUse
-              }
-      hashedRawTx = keccak256 (makeUnsignedTransactionMessage chainId rawTx)
-      sig = addChainIdOffset chainId $ signMessage pk hashedRawTx
-  pure $ fromByteString $ makeSignedTransactionMessage sig rawTx
+signABIFn' proxy pk txo args = signTransaction' pk (txo # _data ?~ (mkDataField proxy args))
 
 signApprovalTx :: PrivateKey -> ChainId -> TransactionOptions NoPay -> { amount :: UIntN S256, spender :: Address } -> HexString
 signApprovalTx = signABIFn (Proxy :: Proxy FT.ApproveFn)
