@@ -71,3 +71,14 @@ deploy-contracts: build-dapp ## Deploy contracts so the server can run
 
 run-server: ## Run the relayer server
 	npm run run-server
+
+bundle: ## Bundle the app for distribution
+	rm -rf foam5g.tgz dist/bundle.js dist/helper.js dist/server.js dist/package.json dist/node_modules dist/build
+	mkdir -p dist/build
+	cp build/*.json dist/build
+	npm run bundle-app
+	npm run browserify
+	npm run backend-dist
+	mv dist foam5g
+	tar cvzf foam5g.tgz foam5g
+	mv foam5g dist

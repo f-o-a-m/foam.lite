@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "merge-contracts-for-etherscan": "rm -rf contracts/merged && sol-merger \"./contracts/*.sol\" \"./contracts/merged\"",
     "postinstall": "spago -x contracts.dhall build",
     "chanterelle-build": "chanterelle build",
     "deploy-contracts": "chanterelle deploy output/DApp.Deploy.Script/index.js",
@@ -14,7 +15,11 @@
     "test-dapp": "spago -x test.dhall test",
     "bundle-app": "spago -x app.dhall bundle-app --to dist/bundle.js",
     "browserify": "browserify dist/bundle.js -o dist/bundle.js -t envify",
-    "serve": "serve dist"
+    "serve": "serve dist",
+    "bundle-helper": "spago -x helper.dhall bundle-app --to dist/helper.js",
+    "bundle-server": "spago -x server.dhall bundle-app --to dist/server.js",
+    "backend-dist": "npm run backend-package-json > dist/package.json && npm run bundle-helper && npm run bundle-server",
+    "backend-package-json": "node -p \"let p=require('./package');delete p.devDependencies;delete p.scripts;JSON.stringify(p,{},4);\""
   },
   "author": "",
   "license": "ISC",
@@ -22,8 +27,8 @@
     "@openzeppelin/contracts": "^3.2.0",
     "ethjs-provider-http": "^0.1.6",
     "secp256k1": "^3.0.0",
+    "sol-merger": "^3.1.0",
     "solc": "^0.6",
-    "truffle-ledger-provider": "^1.0.3",
     "web3": "^1.3.0"
   },
   "devDependencies": {
@@ -35,6 +40,7 @@
     "parcel": "^1.12.4",
     "pulp": "^15.0.0",
     "purescript": "^0.13.0",
+    "rimraf": "^3.0.2",
     "serve": "^11.3.2",
     "spago": "^0.16.0"
   }
