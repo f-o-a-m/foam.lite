@@ -14,15 +14,16 @@ import Data.ByteString as BS
 import Data.Either (Either(..), either, hush)
 import Data.Maybe (Maybe(..), maybe)
 import Effect.Aff.Class (liftAff)
-import MIME (class FromString, PlainText, fromString, toByteString)
+import MIME (class FromString, PlainText, TroutWrapper(..), fromString, toByteString)
 import Network.Ethereum.Core.HexString (HexString)
-import Network.Ethereum.Core.Signatures (nullAddress)
-import Network.Ethereum.Web3 (ChainCursor(..), TransactionOptions, Web3, Web3Error, runWeb3)
+import Network.Ethereum.Core.Signatures (Address, nullAddress)
+import Network.Ethereum.Web3 (BigNumber, ChainCursor(..), TransactionOptions, TransactionReceipt(..), TransactionStatus(..), UIntN, Web3, Web3Error, runWeb3)
+import Network.Ethereum.Web3.Api (eth_getTransactionReceipt)
 import Network.Ethereum.Web3.Types (NoPay)
 import Nodetrout (HTTPError, error400, error500)
-import Type.Trout (type (:/), type (:=), type (:>), type (:<|>), ReqBody, Resource)
+import Type.Trout (type (:/), type (:<|>), type (:=), type (:>), Capture, ReqBody, Resource)
 import Type.Trout.ContentType.JSON (JSON)
-import Type.Trout.Method (Post)
+import Type.Trout.Method (Post, Get)
 import Types (AppM)
 
 newtype RelayRequestBody = RelayRequestBody BS.ByteString
@@ -39,11 +40,15 @@ type SupportedResultMimes = (JSON :<|> PlainText)
 type RelayRoute = "relay" := ("relay" :/ RelaySubroutes)
 type RelaySubroutes =     ("submit" := "submit" :/ ReqBody RelayRequestBody PlainText :> Resource (Post HexString SupportedResultMimes))
                     :<|>  ("validate" := "validate" :/ ReqBody RelayRequestBody PlainText :> Resource (Post (InterpretedDecodedMessage DAppMessage) SupportedResultMimes))
+                    :<|>  ("nonce" := "nonce" :/ Capture "address" (TroutWrapper Address) :> Resource (Get BigNumber SupportedResultMimes))
+                    :<|>  ("tx_status" := "status" :/ Capture "txhash" (TroutWrapper HexString) :> Resource (Get Boolean SupportedResultMimes))
 
 relayRoute :: _
 relayRoute = { 
   "submit": postSubmitRoute,
-  "validate": postValidateRoute
+  "validate": postValidateRoute,
+  "nonce": getNonceRoute,
+  "tx_status": getTxStatusRoute
 }
 
 -- | If we ever run into the *very* unlikely chance that a message can be decoded as both a transfer and a mint
@@ -96,3 +101,14 @@ postValidateRoute (RelayRequestBody b) = {
   "POST": maybe (throwError error400) pure (interpretDecodedMessage (hush <<< parseDAppMessage <<< BS.fromUTF8) <$> decodePackedMessage b)
 }
 
+getNonceRoute :: TroutWrapper Address -> { "GET" :: ExceptT HTTPError AppM BigNumber }
+getNonceRoute (TroutWrapper address) = {
+  "GET": ask >>= \{ provider, relayActions } -> withExceptT web3ErrorToHTTPError (except =<< liftAff (runWeb3 provider $ relayActions.getRelayNonce address))
+}
+
+getTxStatusRoute :: TroutWrapper HexString -> { "GET" :: ExceptT HTTPError AppM Boolean }
+getTxStatusRoute (TroutWrapper txHash) =
+  let getTxStatus = do
+        (TransactionReceipt txr) <- eth_getTransactionReceipt txHash
+        pure $ txr.status == Succeeded
+  in  { "GET": ask >>= \{ provider } -> withExceptT web3ErrorToHTTPError (except =<< liftAff (runWeb3 provider getTxStatus)) }

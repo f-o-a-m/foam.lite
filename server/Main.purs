@@ -5,11 +5,12 @@ import Prelude
 import Chanterelle.Internal.Artifact (_Deployed, _address, _network, readArtifact)
 import Chanterelle.Internal.Logging (LogLevel(..), log)
 import Chanterelle.Internal.Utils (withExceptT')
+import Contracts.RelayableNFT as RNFT
 import Control.Alt ((<|>))
 import DApp.Relay (mintRelayed, mintRelayed', transferRelayed, transferRelayed')
 import DApp.Util (makeTxOpts)
 import Data.Array (head)
-import Data.Either (Either(..))
+import Data.Either (Either(..), either)
 import Data.Int (fromString) as Int
 import Data.Lens (_Just, (^?))
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
@@ -18,11 +19,12 @@ import Effect.Aff (Aff, attempt, error, launchAff_, throwError)
 import Effect.Class (liftEffect)
 import Network.Ethereum.Core.BigNumber (decimal, hexadecimal, parseBigNumber, unsafeToInt)
 import Network.Ethereum.Core.Signatures (Address, mkPrivateKey, privateToAddress)
-import Network.Ethereum.Web3 (httpProvider, mkHexString, runWeb3)
+import Network.Ethereum.Web3 (ChainCursor(..), httpProvider, mkHexString, runWeb3, unUIntN)
 import Network.Ethereum.Web3.Api (eth_getAccounts, eth_sendRawTransaction, net_version)
 import Node.HTTP as NH
 import Node.Net.Socket as NNS
 import Node.Process (lookupEnv)
+import Node.Stream as NS
 import Nodetrout (serve)
 import Routes (appRoutes, routeHandlers)
 import Types (AppEnv, runAppM)
@@ -47,16 +49,18 @@ main = launchAff_ do
 
 withLoggingMiddleware :: (NH.Request -> NH.Response -> Effect Unit) -> NH.Request -> NH.Response -> Effect Unit
 withLoggingMiddleware runServer req res = do
-  runServer req res
   let method = NH.requestMethod req
       url = NH.requestURL req
-      statusCode =  (_.statusCode <<< unsafeCoerce) res
-      statusMessage =  (_.statusMessage <<< unsafeCoerce) res
       httpVersion =  (_.httpVersion <<< unsafeCoerce) req
       requestSocket = (_.socket <<< unsafeCoerce) req
-  remoteAddr <- fromMaybe "<?>" <$> NNS.remoteAddress requestSocket
-  remotePort <- maybe "<?>" show <$> NNS.remotePort requestSocket
-  log Info $ "served " <> remoteAddr <> ":" <> remotePort <> " \"" <> method <> " " <> url <> " HTTP/" <> httpVersion <> "\" " <> statusCode <> " " <> statusMessage
+      logRes level = do
+        -- note that logging  statusCode/message is meaningless here, as Nodetrout uses explicit headers (i.e., calls writeHead)
+        remoteAddr <- fromMaybe "<?>" <$> NNS.remoteAddress requestSocket
+        remotePort <- maybe "<?>" show <$> NNS.remotePort requestSocket
+        log level $ "served " <> remoteAddr <> ":" <> remotePort <> " \"" <> method <> " " <> url <> " HTTP/" <> httpVersion <> "\" "
+  NS.onFinish (NH.responseAsStream res) $ logRes Info
+  NS.onError (NH.responseAsStream res) $ \_ -> logRes Error
+  runServer req res
 
 readArtifacts :: Int -> Aff { rnft :: Address, ft :: Address }
 readArtifacts networkID = do
@@ -102,16 +106,20 @@ mkEnv = do
     Right web3Env' -> pure web3Env'
   artifacts <- readArtifacts web3Env.chainIDInt
   let rnftTxOpts = makeTxOpts { from: web3Env.primaryAccount.addr, to: artifacts.rnft }
+  let getRelayNonce addr =
+        RNFT.getCurrentRelayNonce rnftTxOpts Latest { addr } >>= either (throwError <<< error <<< show) (pure <<< unUIntN)
   relayActions <-
     if not web3Env.primaryAccount.isFromPrivateKey
     then pure {
           doMintRelayed: \msg -> mintRelayed msg rnftTxOpts,
-          doTransferRelayed: \xfer -> transferRelayed xfer rnftTxOpts
+          doTransferRelayed: \xfer -> transferRelayed xfer rnftTxOpts,
+          getRelayNonce
         }
     else case relayerPrivateKey of
       Nothing -> throwError $ error "The impossible happened -- the supplied relayer private key spontaneously combusted"
       Just prv -> pure {
           doMintRelayed: \msg -> mintRelayed' prv msg rnftTxOpts >>= eth_sendRawTransaction,
-          doTransferRelayed: \xfer -> transferRelayed' prv xfer rnftTxOpts >>= eth_sendRawTransaction
+          doTransferRelayed: \xfer -> transferRelayed' prv xfer rnftTxOpts >>= eth_sendRawTransaction,
+          getRelayNonce
         }
   pure { chainID: web3Env.chainID, addresses: { fungibleToken: artifacts.ft, relayableNFT: artifacts.rnft, primaryAccount: web3Env.primaryAccount.addr }, provider, relayActions }

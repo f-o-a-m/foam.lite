@@ -3,16 +3,19 @@ module MIME where
 import Prelude
 
 import Control.Alt ((<|>))
+import Control.Error.Util (note)
 import Data.ByteString as BS
 import Data.Either (Either(..))
 import Data.Maybe (maybe)
 import Data.MediaType.Common (applicationOctetStream, textPlain)
 import Data.Tuple (Tuple(..))
 import Network.Ethereum.Core.HexString as Eth
+import Network.Ethereum.Core.Signatures as Eth
 import Type.Proxy (Proxy(..))
 import Type.Trout (type (:<|>))
 import Type.Trout.ContentType (class AllMimeRender, class HasMediaType, class MimeParse, class MimeRender, getMediaType, mimeParse, mimeRender)
 import Type.Trout.ContentType.JSON (JSON)
+import Type.Trout.PathPiece (class FromPathPiece)
 
 data PlainText
 data OctetStream
@@ -24,7 +27,7 @@ class FromString a where
   fromString :: String -> Either String a
 
 instance fromStringHexString :: FromString Eth.HexString where
-  fromString = maybe (Left "couldnt parse hex string") Right <<< Eth.mkHexString
+  fromString = note "couldnt parse hex string" <<< Eth.mkHexString
 
 instance fromStringMimeParsePlaintext :: FromString a => MimeParse String PlainText a where
   mimeParse _ = fromString
@@ -61,3 +64,10 @@ instance toByteStringMimeRenderOctetStream :: ToByteString a => MimeRender a Oct
 
 instance toByteStringAllMimeRenderOctetStream :: ToByteString a => AllMimeRender a OctetStream BS.ByteString where
   allMimeRender p x = pure (Tuple (getMediaType p) (mimeRender p x))
+
+-- Wrapper to get around orphan instances of Address, HexString etc.
+newtype TroutWrapper a = TroutWrapper a
+instance fromPathPieceTWHexString :: FromPathPiece (TroutWrapper Eth.HexString) where
+  fromPathPiece s = TroutWrapper <$> fromString s
+instance fromPathPieceTWAddress :: FromPathPiece (TroutWrapper Eth.Address) where
+  fromPathPiece s = TroutWrapper <$> (fromString s >>= (note "hex string was not a valid addres" <<< Eth.mkAddress))

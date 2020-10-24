@@ -17,7 +17,10 @@ type AppEnv = {
   chainID :: BigNumber,
   addresses :: { fungibleToken :: Address, relayableNFT :: Address, primaryAccount :: Address },
   provider :: Provider,
-  relayActions :: { doMintRelayed :: SignedRelayedMessage -> Web3 HexString, doTransferRelayed :: SignedRelayedTransfer -> Web3 HexString }
+  relayActions :: { doMintRelayed :: SignedRelayedMessage -> Web3 HexString
+                  , doTransferRelayed :: SignedRelayedTransfer -> Web3 HexString
+                  , getRelayNonce :: Address -> Web3 BigNumber
+                  }
 }
 
 data AppError = Other String
