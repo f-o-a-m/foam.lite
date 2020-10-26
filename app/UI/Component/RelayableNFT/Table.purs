@@ -141,11 +141,13 @@ component =
                     let message = "Error encountered while filtering for RelayableNFT events."
                     ES.emit emitter $ SendToastMsg $ {_type: Toast.Error, message }
                     throwException $ error $ show web3Error
-                  Right result -> case result of
-                    Left (MultiFilterStreamState {currentBlock}) -> 
-                      Console.log $ "Polling RelayableNFT terminated by Filter at block " <> show currentBlock
-                    Right receipt -> 
-                      Console.log $ "Polling RelayableNFT terminated by app at block " <> show receipt.blockNumber
+                  Right result -> do
+                    case result of
+                      Left (MultiFilterStreamState {currentBlock}) -> 
+                        Console.log $ "Polling RelayableNFT terminated by Filter at block " <> show currentBlock
+                      Right receipt ->
+                        Console.log $ "Polling RelayableNFT terminated by app at block " <> show receipt.blockNumber
+                    liftEffect $ ES.emit emitter $ SendToastMsg {_type: Toast.Warn, message: "Event filter terminated!"}
               pure $ Finalizer $ launchAff_ $ killFiber (error "Component teardown") fibre
               )
           InsertNewTableEntry entry -> do
