@@ -24,3 +24,4 @@ dist/node_modules/
 dist/build/
 deployment/keys.txt
 foam5g.tgz
+package-lock.json
