@@ -33,7 +33,6 @@ import Data.String.Regex as Regex
 import Effect (Effect)
 import Effect.Aff (Aff, launchAff_)
 import Effect.Class (class MonadEffect, liftEffect)
-import Effect.Console as Console
 import Effect.Exception (error)
 import Network.Ethereum.Core.BigNumber (BigNumber, decimal, embed, hexadecimal, parseBigNumber)
 import Network.Ethereum.Core.HexString (HexString, fromByteString, mkHexString, toByteString, unHex)

@@ -2,14 +2,16 @@ module Routes.Relay where
 
 import Prelude
 
+import Chanterelle.Internal.Logging (LogLevel(..), log)
 import Contracts.RelayableNFT as RNFT
 import Control.Monad.Except (ExceptT, except, throwError, withExceptT)
 import Control.Monad.Reader (ask)
 import DApp.Message (DAppMessage, parseDAppMessage)
-import DApp.Relay (SignedRelayedMessage, SignedRelayedTransfer(..), mintRelayed, recoverRelayedTransferSignerWeb3, transferRelayed)
+import DApp.Relay (SignedRelayedMessage, SignedRelayedTransfer(..), recoverRelayedTransferSignerWeb3)
 import DApp.Relay.Types (DecodedMessage(..), InterpretedDecodedMessage, decodePackedMessage, interpretDecodedMessage)
 import DApp.Util (makeTxOpts, widenUIntN32)
 import Data.Argonaut (class DecodeJson, decodeJson)
+import Data.ByteString (Encoding(..))
 import Data.ByteString as BS
 import Data.Either (Either(..), either, hush)
 import Data.Maybe (Maybe(..), maybe)
@@ -17,9 +19,8 @@ import Effect.Aff.Class (liftAff)
 import MIME (class FromString, PlainText, TroutWrapper(..), fromString, toByteString)
 import Network.Ethereum.Core.HexString (HexString)
 import Network.Ethereum.Core.Signatures (Address, nullAddress)
-import Network.Ethereum.Web3 (BigNumber, ChainCursor(..), TransactionOptions, TransactionReceipt(..), TransactionStatus(..), UIntN, Web3, Web3Error, runWeb3)
+import Network.Ethereum.Web3 (BigNumber, ChainCursor(..), TransactionReceipt(..), TransactionStatus(..), Web3Error, runWeb3)
 import Network.Ethereum.Web3.Api (eth_getTransactionReceipt)
-import Network.Ethereum.Web3.Types (NoPay)
 import Nodetrout (HTTPError, error400, error500)
 import Type.Trout (type (:/), type (:<|>), type (:=), type (:>), Capture, ReqBody, Resource)
 import Type.Trout.ContentType.JSON (JSON)
@@ -36,12 +37,11 @@ instance decodeJsonRelayRequestBody :: DecodeJson RelayRequestBody where
 instance fromStringRelayRequestBody :: FromString RelayRequestBody where
   fromString = map (RelayRequestBody <<< toByteString) <<< (fromString :: String -> Either String HexString)
 
-type SupportedResultMimes = (JSON :<|> PlainText)
 type RelayRoute = "relay" := ("relay" :/ RelaySubroutes)
-type RelaySubroutes =     ("submit" := "submit" :/ ReqBody RelayRequestBody PlainText :> Resource (Post HexString SupportedResultMimes))
-                    :<|>  ("validate" := "validate" :/ ReqBody RelayRequestBody PlainText :> Resource (Post (InterpretedDecodedMessage DAppMessage) SupportedResultMimes))
-                    :<|>  ("nonce" := "nonce" :/ Capture "address" (TroutWrapper Address) :> Resource (Get BigNumber SupportedResultMimes))
-                    :<|>  ("tx_status" := "status" :/ Capture "txhash" (TroutWrapper HexString) :> Resource (Get Boolean SupportedResultMimes))
+type RelaySubroutes =     ("submit" := "submit" :/ ReqBody RelayRequestBody PlainText :> Resource (Post HexString PlainText))
+                    :<|>  ("validate" := "validate" :/ ReqBody RelayRequestBody PlainText :> Resource (Post (InterpretedDecodedMessage DAppMessage) PlainText))
+                    :<|>  ("nonce" := "nonce" :/ Capture "address" (TroutWrapper Address) :> Resource (Get BigNumber PlainText))
+                    :<|>  ("tx_status" := "status" :/ Capture "txhash" (TroutWrapper HexString) :> Resource (Get Boolean PlainText))
 
 relayRoute :: _
 relayRoute = { 

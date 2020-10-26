@@ -18,7 +18,7 @@ import Effect (Effect)
 import Effect.Aff (Aff, attempt, error, launchAff_, throwError)
 import Effect.Class (liftEffect)
 import Network.Ethereum.Core.BigNumber (decimal, hexadecimal, parseBigNumber, unsafeToInt)
-import Network.Ethereum.Core.Signatures (Address, mkPrivateKey, privateToAddress)
+import Network.Ethereum.Core.Signatures (Address, mkAddress, mkPrivateKey, privateToAddress)
 import Network.Ethereum.Web3 (ChainCursor(..), httpProvider, mkHexString, runWeb3, unUIntN)
 import Network.Ethereum.Web3.Api (eth_getAccounts, eth_sendRawTransaction, net_version)
 import Node.HTTP as NH
@@ -67,15 +67,18 @@ readArtifacts networkID = do
   rnftPath <- liftEffect $ fromMaybe "build/RelayableNFT.json" <$> lookupEnv "RELAYABLENFT_ARTIFACT"
   ftPath <- liftEffect $ fromMaybe "build/FungibleToken.json" <$> lookupEnv "FUNGIBLETOKEN_ARTIFACT"
   withExceptT' error do
-    let readArtifact' name path = do
+    let readAddress' addrStr = maybe (throwError $ "Couldn't make a valid address out of " <> show addrStr) pure (mkHexString addrStr >>= mkAddress)
+        readArtifact' name path = do
           log Info $ "Reading " <> name <> " artifact at " <> path
           art <- readArtifact path
           let maddress = art ^? _network networkID <<< _Just <<< _Deployed <<< _Just <<< _address
           addr <- maybe (throwError $ "Couldn't find valid deploy address for chain ID " <> show networkID <> " in artifact: " <> path) pure maddress
-          log Info $ "Using " <> name <> " address: " <> show addr
           pure addr
-    rnft <- readArtifact' "RelayableNFT" rnftPath
-    ft <- readArtifact' "FungibleToken" ftPath
+
+    rnft <- maybe (readArtifact' "RelayableNFT" rnftPath) readAddress' =<< (liftEffect $ lookupEnv "RELAYABLENFT_ADDRESS")
+    log Info $ "Using RelayableNFT address: " <> show rnft
+    ft <- maybe (readArtifact' "FungibleToken" ftPath) readAddress' =<< (liftEffect $ lookupEnv "FUNGIBLETOKEN_ADDRESS")
+    log Info $ "Using FungibleToken address: " <> show ft
     pure { rnft, ft }
 
 mkEnv :: Aff AppEnv
