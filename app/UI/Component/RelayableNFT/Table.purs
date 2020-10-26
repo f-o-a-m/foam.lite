@@ -4,7 +4,7 @@ import Prelude
 
 import Contracts.RelayableNFT as RNFT
 import Control.Monad.Reader (class MonadAsk, ask)
-import Data.Array ((..), (:))
+import Data.Array ((:), (..))
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), maybe)
 import Effect.Aff (error, killFiber, launchAff, launchAff_)
@@ -17,11 +17,11 @@ import Halogen.HTML as HH
 import Halogen.Query.EventSource (Finalizer(..))
 import Halogen.Query.EventSource as ES
 import Network.Ethereum.Web3 (Change(..), EventAction(..), MultiFilterStreamState(..), event', eventFilter, runWeb3)
-import Network.Ethereum.Web3.Contract.Events (pollEvent')
 import Ocelot.Block.Table as Table
 import Ocelot.HTML.Properties (css)
 import Type.Proxy (Proxy(..))
 import UI.Component.RelayableNFT.Types (TableEntry(..), generateTableEntry, tableEntryView)
+import UI.Component.Tray as Tray
 import UI.Monad (AppEnv(..))
 import UI.Style.Block.Backdrop as Backdrop
 import UI.Style.Block.Documentation as Documentation
@@ -33,10 +33,13 @@ data Query a
 data Action
   = Initialize
   | InsertNewTableEntry TableEntry
+  | SendTrayMsg Tray.TrayMsg
 
 type Input = Unit
 
 type Message = Void
+
+type Slots = ( tray :: H.Slot Tray.Query Void Unit )
 
 component
   :: ∀ m.
@@ -51,7 +54,7 @@ component =
     }
   where
 
-    render :: State -> H.ComponentHTML Action () m
+    render :: State -> H.ComponentHTML Action Slots m
     render s =
       HH.div_
         [ Documentation.block_
@@ -61,6 +64,7 @@ component =
             [ Backdrop.backdrop_
               [ renderTable ]
             ]
+        , HH.slot Tray._tray unit Tray.component unit absurd
         ]
       where
         renderTable =
@@ -133,7 +137,10 @@ component =
               fibre <- launchAff $ do
                 ePollResult <- runWeb3 web3Provider $ event' filters handlers {windowSize:1, trailBy:0}
                 case ePollResult of
-                  Left web3Error -> liftEffect $ throwException $ error $ show web3Error
+                  Left web3Error -> liftEffect do 
+                    let message = "Error encountered while filtering for RelayableNFT events."
+                    ES.emit emitter $ SendTrayMsg $ {_type: Tray.Error, message }
+                    throwException $ error $ show web3Error
                   Right result -> case result of
                     Left (MultiFilterStreamState {currentBlock}) -> 
                       Console.log $ "Polling RelayableNFT terminated by Filter at block " <> show currentBlock
@@ -144,3 +151,4 @@ component =
           InsertNewTableEntry entry -> do
             st <- H.get
             H.put $ entry : st 
+          SendTrayMsg _ -> pure unit
