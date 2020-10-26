@@ -18,7 +18,7 @@
     "serve": "serve dist",
     "bundle-helper": "spago -x helper.dhall bundle-app --to dist/helper.js",
     "bundle-server": "spago -x server.dhall bundle-app --to dist/server.js",
-    "backend-dist": "npm run backend-package-json > dist/package.json && npm run bundle-helper && npm run bundle-server",
+    "backend-dist": "npm run --silent backend-package-json > dist/package.json && npm run bundle-helper && npm run bundle-server",
     "backend-package-json": "node -p \"let p=require('./package');delete p.devDependencies;delete p.scripts;JSON.stringify(p,{},4);\""
   },
   "author": "",
