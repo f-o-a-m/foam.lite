@@ -21,7 +21,7 @@ import Ocelot.Block.Table as Table
 import Ocelot.HTML.Properties (css)
 import Type.Proxy (Proxy(..))
 import UI.Component.RelayableNFT.Types (TableEntry(..), generateTableEntry, tableEntryView)
-import UI.Component.Tray as Tray
+import UI.Component.Toast as Toast
 import UI.Monad (AppEnv(..))
 import UI.Style.Block.Backdrop as Backdrop
 import UI.Style.Block.Documentation as Documentation
@@ -33,13 +33,13 @@ data Query a
 data Action
   = Initialize
   | InsertNewTableEntry TableEntry
-  | SendTrayMsg Tray.TrayMsg
+  | SendToastMsg Toast.ToastMsg
 
 type Input = Unit
 
 type Message = Void
 
-type Slots = ( tray :: H.Slot Tray.Query Void Unit )
+type Slots = ( toast :: H.Slot Toast.Query Void Unit )
 
 component
   :: ∀ m.
@@ -64,7 +64,7 @@ component =
             [ Backdrop.backdrop_
               [ renderTable ]
             ]
-        , HH.slot Tray._tray unit Tray.component unit absurd
+        , HH.slot Toast._toast unit Toast.component unit absurd
         ]
       where
         renderTable =
@@ -139,7 +139,7 @@ component =
                 case ePollResult of
                   Left web3Error -> liftEffect do 
                     let message = "Error encountered while filtering for RelayableNFT events."
-                    ES.emit emitter $ SendTrayMsg $ {_type: Tray.Error, message }
+                    ES.emit emitter $ SendToastMsg $ {_type: Toast.Error, message }
                     throwException $ error $ show web3Error
                   Right result -> case result of
                     Left (MultiFilterStreamState {currentBlock}) -> 
@@ -151,4 +151,4 @@ component =
           InsertNewTableEntry entry -> do
             st <- H.get
             H.put $ entry : st 
-          SendTrayMsg _ -> pure unit
+          SendToastMsg _ -> pure unit
