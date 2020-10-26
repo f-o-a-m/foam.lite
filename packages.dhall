@@ -194,6 +194,59 @@ let additions =
           , version =
             "v0.0.4"
           }
+      , react-map-gl =
+          { dependencies =
+              [ "prelude"
+              , "react"
+              , "web-mercator"
+              , "simple-json"
+              , "generics-rep"
+              ]
+          , repo =
+              "https://github.com/f-o-a-m/purescript-react-map-gl.git"
+          , version =
+              "master"
+          }
+      , map-gl =
+          { dependencies =
+            [ "aff"
+            , "aff-bus"
+            , "effect"
+            , "prelude"
+            , "react-dom"
+            , "web-mercator"
+            ]
+          , repo =
+              "https://github.com/f-o-a-m/purescript-react-map-gl.git"
+          , version =
+              "master"
+          } 
+      , deck-gl =
+          { dependencies =
+              [ "effect"
+              , "foreign"
+              , "foreign-object"
+              , "prelude"
+              , "psci-support"
+              , "web-mercator"
+              , "react-dom"
+              ]
+          , repo =
+              "https://github.com/f-o-a-m/purescript-deck-gl.git"
+          , version =
+              "master"
+          } 
+      , web-mercator =
+          { dependencies =
+              [ "partial"
+              , "prelude"
+              , "functions"
+              ]
+          , repo =
+              "https://github.com/f-o-a-m/purescript-web-mercator.git"
+          , version =
+              "master"
+          } 
       }
 
 in  upstream // overrides // additions
