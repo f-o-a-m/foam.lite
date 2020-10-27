@@ -50025,3 +50025,21 @@ input[type=range]::-ms-thumb {
     z-index: auto;
   }
 }
+
+/* Stuff that didn't come from ocelot*/
+.left-half {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 50%;
+
+}
+
+.right-half {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    right: 0;
+}

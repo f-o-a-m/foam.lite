@@ -7,6 +7,7 @@ import Control.Monad.Reader (class MonadAsk, ask)
 import Data.Array ((:), (..))
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), maybe)
+import Data.Symbol (SProxy(..))
 import Effect.Aff (error, killFiber, launchAff, launchAff_)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class.Console as Console
@@ -20,11 +21,14 @@ import Network.Ethereum.Web3 (Change(..), EventAction(..), MultiFilterStreamStat
 import Ocelot.Block.Table as Table
 import Ocelot.HTML.Properties (css)
 import Type.Proxy (Proxy(..))
+import UI.Component.Logging.Toast as Toast
 import UI.Component.RelayableNFT.Types (TableEntry(..), generateTableEntry, tableEntryView)
-import UI.Component.Toast as Toast
 import UI.Monad (AppEnv(..))
 import UI.Style.Block.Backdrop as Backdrop
 import UI.Style.Block.Documentation as Documentation
+
+_nftTable :: SProxy "nftTable"
+_nftTable = SProxy
 
 type State = Array TableEntry
 

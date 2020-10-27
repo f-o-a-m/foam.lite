@@ -1,4 +1,4 @@
-module UI.Component.Toast where
+module UI.Component.Logging.Toast where
 
 import Prelude
 

@@ -6,6 +6,7 @@ import Contracts.RelayableNFT as RNFT
 import Data.Maybe (Maybe(..))
 import Data.Mock as Mock
 import Network.Ethereum.Core.HexString (HexString)
+import UI.Utils (formatAddress, formatHexString)
 
 data TableEntry 
   = Minted HexString RNFT.MintedByRelay
@@ -26,20 +27,20 @@ tableEntryView
      }
 tableEntryView (Minted txHash (RNFT.MintedByRelay a)) =
   { _type: "Minted"
-  , txHash: show txHash
-  , minter: Just $ show a.minter
+  , txHash: formatHexString txHash
+  , minter: Just <<< formatAddress $ a.minter
   , owner: Nothing
   , destination: Nothing
-  , relayer: show a.relayer
+  , relayer: formatAddress a.relayer
   , tokenID: show a.tokenID
   }
 tableEntryView (Transferred txHash (RNFT.TransferredByRelay a)) =
   { _type: "Transferred"
-  , txHash: show txHash
+  , txHash: formatHexString txHash
   , minter: Nothing
-  , owner: Just $ show a.owner
-  , destination: Just $ show a.destination
-  , relayer: show a.relayer
+  , owner: Just <<< formatAddress $ a.owner
+  , destination: Just <<< formatAddress $ a.destination
+  , relayer: formatAddress a.relayer
   , tokenID: show a.tokenID
   }
 

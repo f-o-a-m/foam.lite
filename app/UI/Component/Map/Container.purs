@@ -6,6 +6,7 @@ import Prelude
 import Control.Lazy (fix)
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(..))
+import Data.Symbol (SProxy(..))
 import Data.Tuple (Tuple(..))
 import Effect.Aff (launchAff_)
 import Effect.Aff.Bus as Bus
@@ -18,10 +19,13 @@ import Halogen.Query.EventSource as ES
 import Partial.Unsafe (unsafeCrashWith)
 import React as R
 import ReactDOM (render) as RDOM
+import UI.Component.Map.Component as Map
 import Web.HTML (window)
 import Web.HTML.HTMLElement as HTMLElement
 import Web.HTML.Window as Window
-import UI.Component.Map.Component as Map
+
+_map :: SProxy "map"
+_map = SProxy
 
 type Slot f = H.Slot f Map.MapMessages
 
@@ -31,8 +35,10 @@ data Action
   = Initialize
   | HandleMessages Map.Messages
 
-mapComponent :: forall f i m. MonadAff m => H.Component HH.HTML f i Map.MapMessages m
-mapComponent =
+data Query a
+
+component :: forall f i m. MonadAff m => H.Component HH.HTML f i Map.MapMessages m
+component =
   H.mkComponent
     { initialState: const Nothing
     , render
