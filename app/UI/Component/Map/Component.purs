@@ -63,11 +63,11 @@ mapClass = R.component "Map" \this -> do
     , render: render this
     , state:
         { viewport: MapGL.Viewport
-          { width
-          , height
-          , longitude: -74.00539284665783
-          , latitude: 40.70544878575082
-          , zoom: 10.822714855509464
+          { width: width / 2.0
+          , height: height
+          , longitude: -73.9738063
+          , latitude: 40.6993158
+          , zoom: 18.0
           , pitch: 0.0
           , bearing: 0.0
           }
