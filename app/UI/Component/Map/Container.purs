@@ -4,6 +4,7 @@ module UI.Component.Map.Container where
 import Prelude
 
 import Control.Lazy (fix)
+import Data.Foldable (for_)
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(..))
 import Data.Symbol (SProxy(..))
@@ -11,7 +12,7 @@ import Data.Tuple (Tuple(..))
 import Effect.Aff (launchAff_)
 import Effect.Aff.Bus as Bus
 import Effect.Aff.Class (class MonadAff, liftAff)
-import Halogen (liftEffect)
+import Halogen (lift, liftEffect)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
@@ -36,8 +37,9 @@ data Action
   | HandleMessages Map.Messages
 
 data Query a
+  = NewPoint Map.MapPoint a
 
-component :: forall f i m. MonadAff m => H.Component HH.HTML f i Map.MapMessages m
+component :: forall i m. MonadAff m => H.Component HH.HTML Query i Map.MapMessages m
 component =
   H.mkComponent
     { initialState: const Nothing
@@ -53,13 +55,14 @@ component =
       [ HH.div [ HP.ref (H.RefLabel "map") ] []
       ]
 
-eval :: forall f i s m. MonadAff m => H.HalogenQ f Action i ~> H.HalogenM State Action s Map.MapMessages m
+eval :: forall i m. MonadAff m => H.HalogenQ Query Action i ~> H.HalogenM State Action () Map.MapMessages m
 eval = H.mkEval $ H.defaultEval 
   { handleAction = handleAction
+  , handleQuery = handleQuery
   , initialize = Just Initialize
   }
   where
-    handleAction :: Action -> H.HalogenM State Action s Map.MapMessages m Unit
+    handleAction :: Action -> H.HalogenM State Action () Map.MapMessages m Unit
     handleAction = case _ of
       Initialize -> do
         H.getHTMLElementRef (H.RefLabel "map") >>= case _ of
@@ -81,3 +84,11 @@ eval = H.mkEval $ H.defaultEval
         case msg of
           Map.PublicMsg msg' -> H.raise msg'
           Map.IsInitialized bus -> H.put $ Just bus
+
+    handleQuery :: forall a.  Query a -> H.HalogenM State Action () Map.MapMessages m (Maybe a)
+    handleQuery = case _ of
+      NewPoint p next -> do
+        mCommands <- H.get
+        liftAff $ for_ mCommands $ \commandBus -> 
+          Bus.write (Map.NewPoint' p) commandBus
+        pure $ Just next

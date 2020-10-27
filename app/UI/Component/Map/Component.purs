@@ -2,6 +2,7 @@ module UI.Component.Map.Component where
 
 import Prelude
 
+import Data.Array ((:))
 import Control.Lazy (fix)
 import Data.Newtype (un, unwrap)
 import Data.Tuple (snd)
@@ -36,6 +37,7 @@ data MapMessages
 data Commands
   = SetViewport' Viewport
   | AskViewport' (AVar Viewport)
+  | NewPoint' MapPoint
 
 data Messages
   = IsInitialized (Bus.BusW Commands)
@@ -52,6 +54,7 @@ type Props =
 type State =
   { command :: Bus.BusRW Commands
   , viewport :: MapGL.Viewport
+  , data :: Array MapPoint
   }
 
 mapClass :: R.ReactClass Props
@@ -74,6 +77,7 @@ mapClass = R.component "Map" \this -> do
           , bearing: 0.0
           }
         , command
+        , data: [newLab]
         }
     }
   where
@@ -91,12 +95,14 @@ mapClass = R.component "Map" \this -> do
         case msg of
           SetViewport' vp -> liftEffect $ R.modifyState this _{viewport = vp}
           AskViewport' var -> liftEffect (R.getState this) >>= \{viewport} -> AVar.put viewport var
+          NewPoint' p -> liftEffect $ R.modifyState this (\st -> st {data = (p : st.data)})
+            
         loop
 
     render :: R.ReactThis Props State -> R.Render
     render this = do
       { messages } <- R.getProps this
-      { viewport } <- R.getState this
+      { viewport, data:_data } <- R.getState this
       pure $ R.createElement MapGL.mapGL
         (un MapGL.Viewport viewport `disjointUnion`
         { onViewportChange: mkEffectFn1 $ \newVp -> do
@@ -113,7 +119,7 @@ mapClass = R.component "Map" \this -> do
         })
         [ R.createLeafElement iconLayerClass 
             { viewport
-            , data: [newLab]
+            , data: _data
             } 
         ]
 
