@@ -69,7 +69,7 @@ mapClass = R.component "Map" \this -> do
           , height: height
           , longitude: -73.9738063
           , latitude: 40.6993158
-          , zoom: 13.0
+          , zoom: 15.0
           , pitch: 0.0
           , bearing: 0.0
           }
