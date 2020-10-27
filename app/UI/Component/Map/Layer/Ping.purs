@@ -1,4 +1,4 @@
-module Components.Map.Layer.Ping where
+module UI.Component.Map.Layer.Ping where
 
 import DeckGL (Layer)
 import DeckGL.BaseProps (BaseProps)

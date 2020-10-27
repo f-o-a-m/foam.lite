@@ -22,6 +22,7 @@ import MapGL as MapGL
 import Math (pow)
 import React as R
 import Record (disjointUnion)
+import UI.Component.Map.Layer.Ping as Ping
 import Unsafe.Coerce (unsafeCoerce)
 import WebMercator.LngLat (LngLat)
 import WebMercator.LngLat as LngLat
@@ -111,9 +112,10 @@ mapClass = R.component "Map" \this -> do
         , touchZoom: true
         , touchRotate: true
         })
-        [ R.createLeafElement iconLayerClass 
+        [ R.createLeafElement layerClass 
             { viewport
             , data: [newLab]
+            , pings: mapPointToPing <$> [newLab]
             } 
         ]
 
@@ -136,15 +138,16 @@ type MapPoint =
   }
 
 -- | Icon Layer Component
-type IconProps =
+type LayerProps =
   { viewport :: MapGL.Viewport
   , data :: Array MapPoint
+  , pings :: Array (Ping.PingData ())
   }
 
 type MapState = Record ()
 
-iconLayerClass :: R.ReactClass IconProps
-iconLayerClass = R.component "IconLayer" \this -> do
+layerClass :: R.ReactClass LayerProps
+layerClass = R.component "Layers" \this -> do
   props <- R.getProps this
   pure
     { render: render this
@@ -158,6 +161,11 @@ iconLayerClass = R.component "IconLayer" \this -> do
       Console.log $ unsafeCoerce state
 
       let vp = unwrap props.viewport
+          pingLayer = Ping.makePingLayer $ 
+                        (Ping.defaultPingProps 
+                          { data = props.pings
+                          , currentTime = 0.0
+                          })
           iconLayer = Icon.makeIconLayer $
                         ( Icon.defaultIconProps { id = "icon-layer"
                                                 , data = map (\m -> { point: m }) props.data
@@ -178,7 +186,7 @@ iconLayerClass = R.component "IconLayer" \this -> do
                                                 })
       pure
         $ R.createLeafElement DeckGL.deckGL
-        $ DeckGL.defaultDeckGLProps { layers = [ iconLayer ], viewState = vp }
+        $ DeckGL.defaultDeckGLProps { layers = [ iconLayer, pingLayer ], viewState = vp }
 
 pointLngLat :: MapPoint -> LngLat
 pointLngLat m = LngLat.make m.coordinates
@@ -216,3 +224,10 @@ onClickPoint
 onClickPoint {object: {point}} = do 
   Console.log $ unsafeCoerce $ point.coordinates
   pure true
+
+mapPointToPing :: MapPoint -> Ping.PingData ()
+mapPointToPing p =
+  { position: LngLat.make p.coordinates
+  , radius: 200.0
+  , color: [0, 0, 255, 125]
+  }
