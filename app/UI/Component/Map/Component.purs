@@ -14,6 +14,7 @@ import Effect.Aff.AVar (AVar)
 import Effect.Aff.AVar as AVar
 import Effect.Aff.Bus as Bus
 import Effect.Class (liftEffect)
+import Effect.Class.Console as Console
 import Effect.Uncurried (mkEffectFn1)
 import Foreign.Object as O
 import MapGL (Viewport, ClickInfo)
@@ -21,6 +22,7 @@ import MapGL as MapGL
 import Math (pow)
 import React as R
 import Record (disjointUnion)
+import Unsafe.Coerce (unsafeCoerce)
 import WebMercator.LngLat (LngLat)
 import WebMercator.LngLat as LngLat
 
@@ -67,7 +69,7 @@ mapClass = R.component "Map" \this -> do
           , height: height
           , longitude: -73.9738063
           , latitude: 40.6993158
-          , zoom: 18.0
+          , zoom: 13.0
           , pitch: 0.0
           , bearing: 0.0
           }
@@ -111,10 +113,18 @@ mapClass = R.component "Map" \this -> do
         })
         [ R.createLeafElement iconLayerClass 
             { viewport
-            , data: []
+            , data: [newLab]
             } 
         ]
 
+newLab :: MapPoint
+newLab = 
+  { coordinates: 
+      { lng: -73.973806
+      , lat: 40.6993158
+      }
+  , pointId: "beacon"
+  }
 
 --------------------------------------------------------------------------------
 -- | DeckGL Component
@@ -144,30 +154,27 @@ iconLayerClass = R.component "IconLayer" \this -> do
     render this = do
       props <- R.getProps this
       state <- R.getState this
+      Console.log $ unsafeCoerce props
+      Console.log $ unsafeCoerce state
 
       let vp = unwrap props.viewport
           iconLayer = Icon.makeIconLayer $
-                        ( Icon.defaultIconProps { id = "icon"
+                        ( Icon.defaultIconProps { id = "icon-layer"
                                                 , data = map (\m -> { point: m }) props.data
                                                 , pickable = true
                                                 , visible = true
-                                                , iconAtlas = "/beacon.png"
+                                                , iconAtlas = iconUrl
                                                 , iconMapping = 
                                                     O.insert "beacon"
-                                                      { x: 0
-                                                      , y: 0
-                                                      , width:  36
-                                                      , height: 36
-                                                      , mask: true
-                                                      }
+                                                      basicIcon
                                                       O.empty
                                                 , opacity = 1.0
                                                 , getPosition = \{point} -> pointLngLat point
                                                 , getIcon = const "beacon"
-                                                , getSize = const $ 
-                                                    let sizeScale = (min 1.0 $ pow 1.5 (vp.zoom - 14.0)) * 18.0 * 2.0 -- copy/pasted from foam.visualizer
-                                                    in sizeScale * 1.0
+                                                , getSize = const $ 1.0
+                                                , sizeScale = (min 1.0 $ pow 1.5 (vp.zoom - 14.0)) * 18.0 * 2.0 -- copy/pasted from foam.visualizer
                                                 , onClick = mkEffectFn1 onClickPoint
+                                        --        , getColor = const [256.0, 140.0, 0.0]
                                                 })
       pure
         $ R.createLeafElement DeckGL.deckGL
@@ -176,17 +183,36 @@ iconLayerClass = R.component "IconLayer" \this -> do
 pointLngLat :: MapPoint -> LngLat
 pointLngLat m = LngLat.make m.coordinates
 
--- | The base icon size.
-iconSize :: Number
-iconSize = 60.0
-
 mapStyle :: String
 mapStyle = "mapbox://styles/mapbox/dark-v9"
 
 mapboxApiAccessToken :: String
 mapboxApiAccessToken = "pk.eyJ1IjoiYmxpbmt5MzcxMyIsImEiOiJjamVvcXZtbGYwMXgzMzNwN2JlNGhuMHduIn0.ue2IR6wHG8b9eUoSfPhTuQ"
 
+iconUrl :: String
+iconUrl = "beacon.png"
+
+type IconEntry = 
+  { x :: Int
+  , y :: Int
+  , width :: Int
+  , height :: Int
+  , mask :: Boolean
+  }
+
+basicIcon :: IconEntry
+basicIcon = 
+  { x: 0
+  , y: 0
+  , width:  36
+  , height: 36
+  , mask: false
+  }
+
+
 onClickPoint
   :: BaseLayer.PickingInfo {point :: MapPoint}
   -> Effect  Boolean
-onClickPoint = const $ pure true
+onClickPoint {object: {point}} = do 
+  Console.log $ unsafeCoerce $ point.coordinates
+  pure true
