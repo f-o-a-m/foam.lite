@@ -20,7 +20,9 @@ import Halogen.Query.EventSource as ES
 import Partial.Unsafe (unsafeCrashWith)
 import React as R
 import ReactDOM (render) as RDOM
+import Test.Unit.Console as Console
 import UI.Component.Map.Component as Map
+import Unsafe.Coerce (unsafeCoerce)
 import Web.HTML (window)
 import Web.HTML.HTMLElement as HTMLElement
 import Web.HTML.Window as Window
@@ -88,6 +90,7 @@ eval = H.mkEval $ H.defaultEval
     handleQuery :: forall a.  Query a -> H.HalogenM State Action () Map.MapMessages m (Maybe a)
     handleQuery = case _ of
       NewPoint p next -> do
+        Console.log $ "Container received point " <> unsafeCoerce p
         mCommands <- H.get
         liftAff $ for_ mCommands $ \commandBus -> 
           Bus.write (Map.NewPoint' p) commandBus

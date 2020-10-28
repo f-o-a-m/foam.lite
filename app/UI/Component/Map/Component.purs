@@ -2,8 +2,8 @@ module UI.Component.Map.Component where
 
 import Prelude
 
-import Data.Array ((:))
 import Control.Lazy (fix)
+import Data.Array ((:))
 import Data.Newtype (un, unwrap)
 import Data.Tuple (snd)
 import DeckGL as DeckGL
@@ -95,7 +95,9 @@ mapClass = R.component "Map" \this -> do
         case msg of
           SetViewport' vp -> liftEffect $ R.modifyState this _{viewport = vp}
           AskViewport' var -> liftEffect (R.getState this) >>= \{viewport} -> AVar.put viewport var
-          NewPoint' p -> liftEffect $ R.modifyState this (\st -> st {data = (p : st.data)})
+          NewPoint' p -> do 
+            Console.log $ "Map Component received point " <> unsafeCoerce p
+            liftEffect $ R.modifyState this (\st -> st {data = (p : st.data)})
             
         loop
 

@@ -109,12 +109,21 @@ component =
                 eRes <- lift $ RNFT.tokenData txOpts (BN blockNumber) {tokenId: tokenID}
                 liftEffect case eRes of
                   Left err ->
-                    ES.emit emitter $ SendToastMsg {_type: Toast.Error, message: "Couldn't read tokenData for token " <> show tokenID}
+                    ES.emit emitter $ SendToastMsg 
+                      { _type: Toast.Error
+                      , message: "Couldn't read tokenData for token " <> show tokenID
+                      }
                   Right res -> case parseDAppMessage (BS.fromUTF8 res) of
                     Left err ->
-                      ES.emit emitter $ SendToastMsg {_type: Toast.Error, message: "Couldn't parse token message for token " <> show tokenID}
+                      ES.emit emitter $ SendToastMsg 
+                        { _type: Toast.Error
+                        , message: "Couldn't parse token message for token " <> show tokenID
+                        }
                     Right message -> 
-                      ES.emit emitter $ NewNFTEvent {change: c, event: actionWrapper e, message}
+                      ES.emit emitter $ NewNFTEvent 
+                        { change: c
+                        , event: actionWrapper e, message
+                        }
                 pure ContinueEvent
               handlers = 
                 { mint: handler RNFT.MintedByRelay NFTMint
