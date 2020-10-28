@@ -36,7 +36,7 @@ type State =
 
 data Query a 
   = Clear
-  | DisplayMsg ToastMsg
+  | DisplayMsg ToastMsg a
 
 data Action 
   = Dismiss
@@ -50,7 +50,10 @@ component =
   H.mkComponent
     { initialState: const initialState
     , render
-    , eval: H.mkEval $ H.defaultEval { handleAction = handleAction }
+    , eval: H.mkEval $ H.defaultEval 
+        { handleAction = handleAction 
+        , handleQuery = handleQuery
+        }
     }
   where
     initialState :: State
@@ -73,12 +76,12 @@ component =
         state <- H.get
         H.modify_ _ { toastMsg = Nothing }
         pure Nothing
-      DisplayMsg msg -> do
+      DisplayMsg msg next -> do
         state <- H.get
         H.modify_ _ { toastMsg = Just msg }
         H.liftAff $ delay $ Milliseconds 5000.0
         H.modify_ _ { toastMsg = Nothing }
-        pure Nothing
+        pure (Just next)
 
     render :: State -> H.ComponentHTML Action () m
     render state =
