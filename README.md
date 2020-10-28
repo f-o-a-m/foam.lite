@@ -10,10 +10,10 @@ To build the UI, make sure you have already build and deployed the dapp (see ##D
 > npm i
 > npm run bundle-app
 > RELAYER_NFT=<contract adddress> npm run browserify
-> serve -l 8080 dist
+> npm run serve
 ```
 
-The default address is [localhost:5000](localhost:5000)
+The default address is [localhost:8080](localhost:8080)
 
 
 ## Quickstart to do an end-to-end flow
