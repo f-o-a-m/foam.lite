@@ -29,6 +29,7 @@ import UI.Component.Map.Container as Map
 import UI.Component.RelayableNFT.Table as Table
 import UI.Component.RelayableNFT.Types (TableEntry(..))
 import UI.Config (AppEnv(..))
+import Unsafe.Coerce (unsafeCoerce)
 
 type State = Unit
 
@@ -76,6 +77,10 @@ component =
         ]
 
     eval = H.mkEval H.defaultEval
+             { handleAction = handleAction
+             , initialize = Just Initialize
+
+             }
 
     handleAction :: Action -> H.HalogenM State Action Slots Message m Unit
     handleAction = case _ of
@@ -96,6 +101,8 @@ component =
                 -> e 
                 -> ReaderT Change Web3 EventAction
               handler constructor actionWrapper e = do
+                Console.log "Received event"
+                Console.log $ unsafeCoerce e
                 c@(Change{blockNumber}) <- ask
                 let tokenID = (un constructor e).tokenID 
                     txOpts = defaultTransactionOptions # _to ?~ relayableNFT
