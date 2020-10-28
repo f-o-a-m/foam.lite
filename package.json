@@ -15,7 +15,7 @@
     "test-dapp": "spago -x test.dhall test",
     "bundle-app": "spago -x app.dhall bundle-app --to dist/bundle.js",
     "browserify": "browserify dist/bundle.js -o dist/bundle.js -t envify",
-    "serve": "serve dist",
+    "serve": "serve -l 8080 dist",
     "bundle-helper": "spago -x helper.dhall bundle-app --to dist/helper.js",
     "bundle-server": "spago -x server.dhall bundle-app --to dist/server.js",
     "backend-dist": "npm run --silent backend-package-json > dist/package.json && npm run bundle-helper && npm run bundle-server",
