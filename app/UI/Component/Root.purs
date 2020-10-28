@@ -108,18 +108,22 @@ component =
                     txOpts = defaultTransactionOptions # _to ?~ relayableNFT
                 eRes <- lift $ RNFT.tokenData txOpts (BN blockNumber) {tokenId: tokenID}
                 liftEffect case eRes of
-                  Left err ->
+                  Left err -> do
+                    Console.log $ unsafeCoerce err
                     ES.emit emitter $ SendToastMsg 
                       { _type: Toast.Error
                       , message: "Couldn't read tokenData for token " <> show tokenID
                       }
                   Right res -> case parseDAppMessage (BS.fromUTF8 res) of
-                    Left err ->
+                    Left err -> do
+                      Console.log "Error Decoding DAppMessage"
+                      Console.log $ unsafeCoerce err
                       ES.emit emitter $ SendToastMsg 
                         { _type: Toast.Error
                         , message: "Couldn't parse token message for token " <> show tokenID
                         }
-                    Right message -> 
+                    Right message ->  do
+                      Console.log "Emmitting NewNFTEvent"
                       ES.emit emitter $ NewNFTEvent 
                         { change: c
                         , event: actionWrapper e, message
@@ -152,14 +156,19 @@ component =
         let tableEntry = case event of
               NFTMint e -> Minted c.transactionHash e
               NFTTransferred e -> Transferred c.transactionHash e
+        Console.log "Querying child table ..."
         _ <- H.query Table._nftTable unit $ H.tell (Table.InsertNewTableEntry tableEntry)
         case message of
-          ArbitraryString _ -> pure unit
+          ArbitraryString _ -> do
+            Console.log "Got Arbitrary String"
+            pure unit
           Location {lat,lon} -> do
             let point =
                   { coordinates: {lat, lng:lon}
                   , pointId: unHex c.transactionHash
                   }
+
+            Console.log "Got Location, querying child ..."
             _ <- H.query Map._map unit $ H.tell (Map.NewPoint point)
             pure unit
           LocationWithArbitrary {lat,lon} -> do
@@ -167,6 +176,7 @@ component =
                   { coordinates: {lat, lng:lon}
                   , pointId: unHex c.transactionHash
                   }
+            Console.log "Got Location with arbitrary, querying child ..."
             _ <- H.query Map._map unit $ H.tell (Map.NewPoint point)
             pure unit
       _ -> pure unit
