@@ -18,13 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import {COORDINATE_SYSTEM, Layer, experimental} from 'deck.gl';
-const {fp64ify, enable64bitSupport, get} = experimental;
+import {COORDINATE_SYSTEM, Layer} from 'deck.gl';
 import {Model, Geometry} from '@luma.gl/core';
 import {GL} from 'luma.gl/constants';
 
 import vs from './ping-layer-vertex.glsl';
-// import vs64 from './scatterplot-layer-vertex-64.glsl';
 import fs from './ping-layer-fragment.glsl';
 
 
@@ -36,7 +34,6 @@ const defaultProps = {
     radiusMaxPixels: Number.MAX_SAFE_INTEGER, // max point radius in pixels
     strokeWidth: 1,
     outline: false,
-    fp64: false,
     currentTime: 0,
 
     getPosition: x => x.position,
@@ -47,9 +44,6 @@ const defaultProps = {
 export default class PingLayer extends Layer {
     getShaders(id) {
         const {shaderCache} = this.context;
-        /*
-        return enable64bitSupport(this.props) ?
-        {vs: vs64, fs, modules: ['project64', 'picking'], shaderCache} : */
 
         return {vs, fs, modules: [], shaderCache}; // 'project' module added by default.
     }
@@ -72,33 +66,33 @@ export default class PingLayer extends Layer {
     }
 
     updateAttribute({props, oldProps, changeFlags}) {
-        if (props.fp64 !== oldProps.fp64) {
-            const {attributeManager} = this.state;
-            attributeManager.invalidateAll();
+    //    if (props.fp64 !== oldProps.fp64) {
+    //        const {attributeManager} = this.state;
+    //        attributeManager.invalidateAll();
 
-            if (props.fp64 && props.coordinateSystem === COORDINATE_SYSTEM.LNGLAT) {
-                attributeManager.addInstanced({
-                    instancePositions64xyLow: {
-                        size: 2,
-                        accessor: 'getPosition',
-                        update: this.calculateInstancePositions64xyLow
-                    }
-                });
-            } else {
-                attributeManager.remove([
-                    'instancePositions64xyLow'
-                ]);
-            }
-
-        }
+    //        if (props.fp64 && props.coordinateSystem === COORDINATE_SYSTEM.LNGLAT) {
+    //            attributeManager.addInstanced({
+    //                instancePositions64xyLow: {
+    //                    size: 2,
+    //                    accessor: 'getPosition',
+    //                    update: this.calculateInstancePositions64xyLow
+    //                }
+    //            });
+    //        } else {
+    //            attributeManager.remove([
+    //                'instancePositions64xyLow'
+    //            ]);
+    //        }
+    //
+    //   }
     }
 
     updateState({props, oldProps, changeFlags}) {
         super.updateState({props, oldProps, changeFlags});
-        if (props.fp64 !== oldProps.fp64) {
-            const {gl} = this.context;
-            this.setState({model: this._getModel(gl)});
-        }
+    //    if (props.fp64 !== oldProps.fp64) {
+    //        const {gl} = this.context;
+    //        this.setState({model: this._getModel(gl)});
+    //    }
         this.updateAttribute({props, oldProps, changeFlags});
     }
 
@@ -140,17 +134,6 @@ export default class PingLayer extends Layer {
             value[i++] = get(position, 0);
             value[i++] = get(position, 1);
             value[i++] = get(position, 2) || 0;
-        }
-    }
-
-    calculateInstancePositions64xyLow(attribute) {
-        const {data, getPosition} = this.props;
-        const {value} = attribute;
-        let i = 0;
-        for (const point of data) {
-            const position = getPosition(point);
-            value[i++] = fp64ify(get(position, 0))[1];
-            value[i++] = fp64ify(get(position, 1))[1];
         }
     }
 
