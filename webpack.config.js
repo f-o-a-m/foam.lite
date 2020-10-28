@@ -20,6 +20,7 @@ module.exports = {
   devtool: 'eval-source-map',
 
   devServer: {
+    host: '0.0.0.0',
     contentBase: path.resolve(__dirname, 'dist'),
     port: 4008,
     stats: 'errors-only'
