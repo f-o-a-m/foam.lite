@@ -6,4 +6,4 @@ if (module.hot) {
   module.hot.accept();
 }
 
-console.log('app starting');
+console.log('app starting from entrypoint');

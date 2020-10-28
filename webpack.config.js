@@ -90,7 +90,7 @@ module.exports = {
       debug: true
     }),
     new HtmlWebpackPlugin({
-      title: 'purescript-webpack-example',
+      title: 'FOAM Lite',
       template: 'index.html',
       inject: true  // See stackoverflow.com/a/38292765/3067181
     })
