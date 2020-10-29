@@ -36,7 +36,7 @@ const defaultProps = {
     outline: false,
     currentTime: 0,
 
-    getPosition: x => x.position,
+    getPosition: x => {console.log(x.position); return x.position},
     getRadius: x => x.radius || 1,
     getColor: x => x.color || DEFAULT_COLOR
 };
@@ -54,13 +54,13 @@ export default class PingLayer extends Layer {
 
         /* eslint-disable max-len */
         /* deprecated props check */
-        this._checkRemovedProp('radius', 'radiusScale');
-        this._checkRemovedProp('drawOutline', 'outline');
+        // this._checkRemovedProp('radius', 'radiusScale');
+        //this._checkRemovedProp('drawOutline', 'outline');
 
         this.state.attributeManager.addInstanced({
             instancePositions: {size: 3, accessor: 'getPosition', update: this.calculateInstancePositions},
             instanceRadius: {size: 1, accessor: 'getRadius', defaultValue: 1, update: this.calculateInstanceRadius},
-            instanceColors: {size: 4, type: GL.UNSIGNED_BYTE, accessor: 'getColor', update: this.calculateInstanceColors}
+            instanceColors: {size: 4, type: gl.UNSIGNED_BYTE, accessor: 'getColor', update: this.calculateInstanceColors}
         });
         /* eslint-enable max-len */
     }
@@ -115,7 +115,7 @@ export default class PingLayer extends Layer {
         return new Model(gl, Object.assign(this.getShaders(), {
             id: this.props.id,
             geometry: new Geometry({
-                drawMode: GL.TRIANGLE_FAN,
+                drawMode: gl.TRIANGLE_FAN,
                 attributes: {
                     positions: new Float32Array(positions)
                 }
@@ -131,9 +131,9 @@ export default class PingLayer extends Layer {
         let i = 0;
         for (const point of data) {
             const position = getPosition(point);
-            value[i++] = get(position, 0);
-            value[i++] = get(position, 1);
-            value[i++] = get(position, 2) || 0;
+            value[i++] = position[0];
+            value[i++] = position[1];
+            value[i++] = position[2] || 0;
         }
     }
 
@@ -153,10 +153,10 @@ export default class PingLayer extends Layer {
         let i = 0;
         for (const point of data) {
             const color = getColor(point) || DEFAULT_COLOR;
-            value[i++] = get(color, 0);
-            value[i++] = get(color, 1);
-            value[i++] = get(color, 2);
-            value[i++] = isNaN(get(color, 3)) ? 255 : get(color, 3);
+            value[i++] = color[0];
+            value[i++] = color[1];
+            value[i++] = color[2];
+            value[i++] = isNaN(color[3]) ? 255 : color[3];
         }
     }
 }

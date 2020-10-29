@@ -44,7 +44,7 @@ void main(void) {
   // Multiply out radius and clamp to limits
   cyclePosition = mod(currentTime + instancePositions.x * 50000. , 150.) / 100.;
 
-  float outerRadiusPixels = clamp(project_scale(radiusScale * instanceRadius),
+  float outerRadiusPixels = clamp(project_size(radiusScale * instanceRadius),
                                   radiusMinPixels, radiusMaxPixels);
 
   // outline is centered at the radius
@@ -61,7 +61,7 @@ void main(void) {
   // Find the center of the point and add the current vertex
   vec3 center = project_position(instancePositions);
   vec3 vertex = positions * outerRadiusPixels;
-  gl_Position = project_to_clipspace(vec4(center + vertex, 1.0));
+  gl_Position = project_common_position_to_clipspace(vec4(center + vertex, 1.0));
 
   // Apply opacity to instance color, or return instance picking color
   vColor = vec4(instanceColors.rgb, instanceColors.a * opacity) / 255.;

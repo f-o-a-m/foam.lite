@@ -163,7 +163,8 @@ layerClass = R.component "Layers" \this -> do
       let vp = unwrap props.viewport
           pingLayer = Ping.makePingLayer $ 
                         (Ping.defaultPingProps 
-                          { data = props.pings
+                          { id = "ping-layer"
+                          , data = props.pings
                           , currentTime = 0.0
                           })
           iconLayer = Icon.makeIconLayer $
