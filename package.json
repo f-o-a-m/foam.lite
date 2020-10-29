@@ -14,7 +14,6 @@
     "run-server": "spago -x server.dhall run",
     "test-dapp": "spago -x test.dhall test",
     "bundle-app": "spago -x spago.dhall bundle-app --to dist/bundle.js",
-    "browserify": "browserify dist/bundle.js -o dist/bundle.js -t envify",
     "serve": "serve dist",
     "webpack": "DEBUG=purs-loader* DEBUG_DEPTH=100 webpack --mode development --progress --bail",
     "webpack:watch": "DEBUG=purs-loader* DEBUG_DEPTH=100 webpack --mode development --progress --display-error-details --display verbose --watch",
