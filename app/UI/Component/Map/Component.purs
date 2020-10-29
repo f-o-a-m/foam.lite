@@ -3,18 +3,20 @@ module UI.Component.Map.Component where
 import Prelude
 
 import Control.Lazy (fix)
+import Data.DateTime.Instant (unInstant)
 import Data.Newtype (un, unwrap)
 import Data.Tuple (snd)
 import DeckGL as DeckGL
 import DeckGL.BaseProps as BaseLayer
 import DeckGL.Layer.Icon as Icon
 import Effect (Effect)
-import Effect.Aff (error, launchAff_)
+import Effect.Aff (Milliseconds(..), error, launchAff_)
 import Effect.Aff.AVar (AVar)
 import Effect.Aff.AVar as AVar
 import Effect.Aff.Bus as Bus
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
+import Effect.Now (now)
 import Effect.Uncurried (mkEffectFn1)
 import Foreign.Object as O
 import MapGL (Viewport, ClickInfo)
@@ -98,6 +100,7 @@ mapClass = R.component "Map" \this -> do
     render this = do
       { messages } <- R.getProps this
       { viewport } <- R.getState this
+      Milliseconds currentTime <- unInstant <$> now
       pure $ R.createElement MapGL.mapGL
         (un MapGL.Viewport viewport `disjointUnion`
         { onViewportChange: mkEffectFn1 $ \newVp -> do
@@ -116,6 +119,7 @@ mapClass = R.component "Map" \this -> do
             { viewport
             , data: [newLab]
             , pings: mapPointToPing <$> [newLab]
+            , time: currentTime
             } 
         ]
 
@@ -142,6 +146,7 @@ type LayerProps =
   { viewport :: MapGL.Viewport
   , data :: Array MapPoint
   , pings :: Array (Ping.PingData ())
+  , time :: Number
   }
 
 type MapState = Record ()
@@ -165,7 +170,7 @@ layerClass = R.component "Layers" \this -> do
                         (Ping.defaultPingProps 
                           { id = "ping-layer"
                           , data = props.pings
-                          , currentTime = 0.0
+                          , currentTime = props.time
                           })
           iconLayer = Icon.makeIconLayer $
                         ( Icon.defaultIconProps { id = "icon-layer"
