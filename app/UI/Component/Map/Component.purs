@@ -3,6 +3,7 @@ module UI.Component.Map.Component where
 import Prelude
 
 import Control.Lazy (fix)
+import Control.Monad.Rec.Class (forever)
 import Data.DateTime.Instant (unInstant)
 import Data.Newtype (un, unwrap)
 import Data.Tuple (snd)
@@ -10,7 +11,7 @@ import DeckGL as DeckGL
 import DeckGL.BaseProps as BaseLayer
 import DeckGL.Layer.Icon as Icon
 import Effect (Effect)
-import Effect.Aff (Milliseconds(..), error, launchAff_)
+import Effect.Aff (Milliseconds(..), delay, error, launchAff_)
 import Effect.Aff.AVar (AVar)
 import Effect.Aff.AVar as AVar
 import Effect.Aff.Bus as Bus
@@ -55,12 +56,14 @@ type Props =
 type State =
   { command :: Bus.BusRW Commands
   , viewport :: MapGL.Viewport
+  , time :: Number
   }
 
 mapClass :: R.ReactClass Props
 mapClass = R.component "Map" \this -> do
   command <- Bus.make
   { messages, width, height } <- R.getProps this
+  Milliseconds time <- unInstant <$> liftEffect now
   launchAff_ $ Bus.write (IsInitialized $ snd $ Bus.split command) messages
   pure
     { componentDidMount: componentDidMount this
@@ -77,6 +80,7 @@ mapClass = R.component "Map" \this -> do
           , bearing: 0.0
           }
         , command
+        , time
         }
     }
   where
@@ -95,12 +99,16 @@ mapClass = R.component "Map" \this -> do
           SetViewport' vp -> liftEffect $ R.modifyState this _{viewport = vp}
           AskViewport' var -> liftEffect (R.getState this) >>= \{viewport} -> AVar.put viewport var
         loop
+      launchAff_ $ forever  do
+        delay $ Milliseconds 100.0
+        Milliseconds newTime <- unInstant <$> liftEffect now
+        Console.log $ "Updating time to " <> show newTime
+        liftEffect $ R.modifyState this _{time = newTime}
 
     render :: R.ReactThis Props State -> R.Render
     render this = do
-      { messages } <- R.getProps this
-      { viewport } <- R.getState this
-      Milliseconds currentTime <- unInstant <$> now
+      { messages} <- R.getProps this
+      { viewport,time } <- R.getState this
       pure $ R.createElement MapGL.mapGL
         (un MapGL.Viewport viewport `disjointUnion`
         { onViewportChange: mkEffectFn1 $ \newVp -> do
@@ -117,9 +125,9 @@ mapClass = R.component "Map" \this -> do
         })
         [ R.createLeafElement layerClass 
             { viewport
+            , time
             , data: [newLab]
             , pings: mapPointToPing <$> [newLab]
-            , time: currentTime
             } 
         ]
 
