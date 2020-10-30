@@ -5,6 +5,7 @@ import Prelude
 import Control.Lazy (fix)
 import Control.Monad.Rec.Class (forever)
 import Data.DateTime.Instant (unInstant)
+import Data.Array ((:))
 import Data.Newtype (un, unwrap)
 import Data.Tuple (snd)
 import DeckGL as DeckGL
@@ -38,6 +39,7 @@ data MapMessages
 data Commands
   = SetViewport' Viewport
   | AskViewport' (AVar Viewport)
+  | NewPoint' MapPoint
 
 data Messages
   = IsInitialized (Bus.BusW Commands)
@@ -55,6 +57,7 @@ type State =
   { command :: Bus.BusRW Commands
   , viewport :: MapGL.Viewport
   , time :: Number
+  , data :: Array MapPoint
   }
 
 mapClass :: R.ReactClass Props
@@ -79,6 +82,7 @@ mapClass = R.component "Map" \this -> do
           }
         , command
         , time
+        , data: [newLab]
         }
     }
   where
@@ -96,6 +100,10 @@ mapClass = R.component "Map" \this -> do
         case msg of
           SetViewport' vp -> liftEffect $ R.modifyState this _{viewport = vp}
           AskViewport' var -> liftEffect (R.getState this) >>= \{viewport} -> AVar.put viewport var
+          NewPoint' p -> do 
+            Console.log $ "Map Component received point " <> unsafeCoerce p
+            liftEffect $ R.modifyState this (\st -> st {data = (p : st.data)})
+            
         loop
       launchAff_ $ forever  do
         delay $ Milliseconds 100.0
@@ -105,8 +113,8 @@ mapClass = R.component "Map" \this -> do
 
     render :: R.ReactThis Props State -> R.Render
     render this = do
-      { messages} <- R.getProps this
-      { viewport,time } <- R.getState this
+      { messages } <- R.getProps this
+      { viewport, time } <- R.getState this
       pure $ R.createElement MapGL.mapGL
         (un MapGL.Viewport viewport `disjointUnion`
         { onViewportChange: mkEffectFn1 $ \newVp -> do
