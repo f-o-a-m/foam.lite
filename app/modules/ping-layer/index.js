@@ -20,14 +20,12 @@
 
 import {COORDINATE_SYSTEM, Layer} from 'deck.gl';
 import {Model, Geometry} from '@luma.gl/core';
-import {GL} from 'luma.gl/constants';
+import {project32, picking} from '@deck.gl/core';
 
 import vs from './ping-layer-vertex.glsl';
-// import vs64 from './scatterplot-layer-vertex-64.glsl';
 import fs from './ping-layer-fragment.glsl';
 
-
-const DEFAULT_COLOR = [0, 0, 0, 255];
+const DEFAULT_COLOR = [255, 255, 255, 155];
 
 const defaultProps = {
     radiusScale: 1,
@@ -35,9 +33,7 @@ const defaultProps = {
     radiusMaxPixels: Number.MAX_SAFE_INTEGER, // max point radius in pixels
     strokeWidth: 1,
     outline: false,
-    fp64: false,
     currentTime: 0,
-
     getPosition: x => x.position,
     getRadius: x => x.radius || 1,
     getColor: x => x.color || DEFAULT_COLOR
@@ -46,76 +42,52 @@ const defaultProps = {
 export default class PingLayer extends Layer {
     getShaders(id) {
         const {shaderCache} = this.context;
-        /*
-        return enable64bitSupport(this.props) ?
-        {vs: vs64, fs, modules: ['project64', 'picking'], shaderCache} : */
-
-        return {vs, fs, modules: [], shaderCache}; // 'project' module added by default.
+        return {vs, fs, modules: [picking, project32], shaderCache};
     }
 
     initializeState() {
         const {gl} = this.context;
         this.setState({model: this._getModel(gl)});
-
-        /* eslint-disable max-len */
-        /* deprecated props check */
-        //this._checkRemovedProp('radius', 'radiusScale');
-        //this._checkRemovedProp('drawOutline', 'outline');
-
         this.state.attributeManager.addInstanced({
             instancePositions: {size: 3, accessor: 'getPosition', update: this.calculateInstancePositions},
             instanceRadius: {size: 1, accessor: 'getRadius', defaultValue: 1, update: this.calculateInstanceRadius},
             instanceColors: {size: 4, type: gl.UNSIGNED_BYTE, accessor: 'getColor', update: this.calculateInstanceColors}
         });
-        /* eslint-enable max-len */
     }
 
     updateAttribute({props, oldProps, changeFlags}) {
-        if (props.fp64 !== oldProps.fp64) {
+
             const {attributeManager} = this.state;
             attributeManager.invalidateAll();
 
-            if (props.fp64 && props.coordinateSystem === COORDINATE_SYSTEM.LNGLAT) {
-                attributeManager.addInstanced({
-                    instancePositions64xyLow: {
-                        size: 2,
-                        accessor: 'getPosition',
-                        update: this.calculateInstancePositions64xyLow
-                    }
-                });
-            } else {
-                attributeManager.remove([
-                    'instancePositions64xyLow'
-                ]);
-            }
-
-        }
     }
 
     updateState({props, oldProps, changeFlags}) {
         super.updateState({props, oldProps, changeFlags});
-        if (props.fp64 !== oldProps.fp64) {
-            const {gl} = this.context;
-            this.setState({model: this._getModel(gl)});
-        }
         this.updateAttribute({props, oldProps, changeFlags});
     }
 
     draw({uniforms}) {
         const {radiusScale, radiusMinPixels, radiusMaxPixels, outline, strokeWidth, currentTime} = this.props;
-        this.state.model.render(Object.assign({}, uniforms, {
-            outline: outline ? 1 : 0,
-            strokeWidth,
-            radiusScale,
-            radiusMinPixels,
-            radiusMaxPixels,
-            currentTime
-        }));
+        this.state.model.setUniforms(uniforms)
+                        .setUniforms({
+                            outline: outline ? 1 : 0,
+                            strokeWidth,
+                            radiusScale,
+                            radiusMinPixels,
+                            radiusMaxPixels,
+                            currentTime
+                        })
+                        .draw();
     }
 
     _getModel(gl) {
         // a square that minimally cover the unit circle
-        const positions = [-1, -1, 0, -1, 1, 0, 1, 1, 0, 1, -1, 0];
+        const positions = [ -1, -1, 0, 
+                            -1,  1, 0, 
+                             1,  1, 0, 
+                             1, -1, 0
+                          ];
 
         return new Model(gl, Object.assign(this.getShaders(), {
             id: this.props.id,
@@ -142,18 +114,8 @@ export default class PingLayer extends Layer {
         }
     }
 
-    calculateInstancePositions64xyLow(attribute) {
-        const {data, getPosition} = this.props;
-        const {value} = attribute;
-        let i = 0;
-        for (const point of data) {
-            const position = getPosition(point);
-            value[i++] = fp64ify(position[0])[1];
-            value[i++] = fp64ify(position[1])[1];
-        }
-    }
-
     calculateInstanceRadius(attribute) {
+        
         const {data, getRadius} = this.props;
         const {value} = attribute;
         let i = 0;

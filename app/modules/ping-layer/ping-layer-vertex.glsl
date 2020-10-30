@@ -40,9 +40,9 @@ varying vec2 unitPosition;
 varying float innerUnitRadius;
 varying float cyclePosition;
 
-void main(void) {
+void main(void) { 
   // Multiply out radius and clamp to limits
-  cyclePosition = mod(currentTime + instancePositions.x * 50000. , 150.) / 100.;
+  cyclePosition = mod(currentTime + instancePositions.x * 50000. , 2500.) / 2500.;
 
   float outerRadiusPixels = clamp(project_size(radiusScale * instanceRadius),
                                   radiusMinPixels, radiusMaxPixels);
@@ -52,11 +52,10 @@ void main(void) {
   outerRadiusPixels += strokeWidth / 2.0;
 
   // position on the containing square in [-1, 1] space
-  unitPosition = positions.xy;
-
+  unitPosition = vec2(positions.x * 100.0, positions.y * 100.0); //positions.xy;
 
   // 0 - solid circle, 1 - stroke with lineWidth=0
-  innerUnitRadius = (1.0 - strokeWidth / outerRadiusPixels);
+  innerUnitRadius = 0.0; //(1.0 - strokeWidth / outerRadiusPixels);
 
   // Find the center of the point and add the current vertex
   vec3 center = project_position(instancePositions);

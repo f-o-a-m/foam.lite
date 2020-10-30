@@ -37,7 +37,8 @@ void main(void) {
   }
 
   if (distToCenter > innerUnitRadius) {
-    gl_FragColor = vColor;
+    gl_FragColor = vec4(vColor.rgb, (1. - smoothstep(1., 0., smoothstep(0.,1.,(cyclePosition - distToCenter) * 2.))) * vColor.a);
+  //gl_FragColor = vColor;  // vec4(cyclePosition, 0.0, 0.0, 155.0);
   } else {
     gl_FragColor = vec4(vColor.rgb, (1. - smoothstep(0., 1., smoothstep(0.,1.,(cyclePosition - distToCenter) * 2.))) * vColor.a);
   }

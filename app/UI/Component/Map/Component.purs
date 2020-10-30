@@ -31,8 +31,6 @@ import WebMercator.LngLat (LngLat)
 import WebMercator.LngLat as LngLat
 
 --------------------------------------------------------------------------------
-
-
 data MapMessages
   = OnViewportChange Viewport
   | OnClick ClickInfo
@@ -102,7 +100,7 @@ mapClass = R.component "Map" \this -> do
       launchAff_ $ forever  do
         delay $ Milliseconds 100.0
         Milliseconds newTime <- unInstant <$> liftEffect now
-        Console.log $ "Updating time to " <> show newTime
+        -- Console.log $ "Updating time to " <> show newTime
         liftEffect $ R.modifyState this _{time = newTime}
 
     render :: R.ReactThis Props State -> R.Render
@@ -137,7 +135,7 @@ newLab =
       { lng: -73.973806
       , lat: 40.6993158
       }
-  , pointId: "beacon"
+  , pointId: "beaconPointId"
   }
 
 --------------------------------------------------------------------------------
@@ -170,15 +168,19 @@ layerClass = R.component "Layers" \this -> do
     render this = do
       props <- R.getProps this
       state <- R.getState this
-      Console.log $ unsafeCoerce props
-      Console.log $ unsafeCoerce state
-
       let vp = unwrap props.viewport
           pingLayer = Ping.makePingLayer $ 
                         (Ping.defaultPingProps 
                           { id = "ping-layer"
                           , data = props.pings
-                          , currentTime = props.time
+                          -- FIXME/KILLME: turns out `currentTime` overflows and simply 
+                          -- doesn't change unless we subtract by this arbitrary timestamp
+                          -- (taken at the time of the commit)
+                          -- Maybe this is why the shader was written using fp64 ?
+                          , currentTime = props.time - 1604023421163.0
+                          , visible = true
+                          , opacity = 1.0
+                          , pickable = false 
                           })
           iconLayer = Icon.makeIconLayer $
                         ( Icon.defaultIconProps { id = "icon-layer"
@@ -187,12 +189,12 @@ layerClass = R.component "Layers" \this -> do
                                                 , visible = true
                                                 , iconAtlas = iconUrl
                                                 , iconMapping = 
-                                                    O.insert "beacon"
+                                                    O.insert "beaconIcon"
                                                       basicIcon
                                                       O.empty
                                                 , opacity = 1.0
                                                 , getPosition = \{point} -> pointLngLat point
-                                                , getIcon = const "beacon"
+                                                , getIcon = const "beaconIcon"
                                                 , getSize = const $ 1.0
                                                 , sizeScale = (min 1.0 $ pow 1.5 (vp.zoom - 14.0)) * 18.0 * 2.0 -- copy/pasted from foam.visualizer
                                                 , onClick = mkEffectFn1 onClickPoint
@@ -200,7 +202,7 @@ layerClass = R.component "Layers" \this -> do
                                                 })
       pure
         $ R.createLeafElement DeckGL.deckGL
-        $ DeckGL.defaultDeckGLProps { layers = [ iconLayer, pingLayer ], viewState = vp }
+        $ DeckGL.defaultDeckGLProps { layers = [ pingLayer, iconLayer ], viewState = vp }
 
 pointLngLat :: MapPoint -> LngLat
 pointLngLat m = LngLat.make m.coordinates
@@ -231,7 +233,6 @@ basicIcon =
   , mask: false
   }
 
-
 onClickPoint
   :: BaseLayer.PickingInfo {point :: MapPoint}
   -> Effect  Boolean
@@ -243,5 +244,5 @@ mapPointToPing :: MapPoint -> Ping.PingData ()
 mapPointToPing p =
   { position: LngLat.make p.coordinates
   , radius: 200.0
-  , color: [0, 0, 255, 125]
+  , color: [50, 150, 255, 125]
   }
