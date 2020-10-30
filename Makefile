@@ -64,7 +64,7 @@ build-app: install ## Build the frontend
 	npm run build-app
 
 serve-app: ## bundle and serve the app
-	npm run bundle-app && npm run browserify && npm run serve
+	npm run bundle-app && npm run webpack:server
 
 deploy-contracts: build-dapp ## Deploy contracts so the server can run
 	npm run deploy-contracts
@@ -77,7 +77,7 @@ bundle: ## Bundle the app for distribution
 	mkdir -p dist/build
 	cp build/*.json dist/build
 	npm run bundle-app
-	npm run browserify
+	npm run webpack
 	npm run backend-dist
 	mv dist foam5g
 	tar cvzf foam5g.tgz foam5g

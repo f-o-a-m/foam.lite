@@ -3,6 +3,8 @@ module UI.Component.Map.Component where
 import Prelude
 
 import Control.Lazy (fix)
+import Control.Monad.Rec.Class (forever)
+import Data.DateTime.Instant (unInstant)
 import Data.Array ((:))
 import Data.Newtype (un, unwrap)
 import Data.Tuple (snd)
@@ -10,12 +12,13 @@ import DeckGL as DeckGL
 import DeckGL.BaseProps as BaseLayer
 import DeckGL.Layer.Icon as Icon
 import Effect (Effect)
-import Effect.Aff (error, launchAff_)
+import Effect.Aff (Milliseconds(..), delay, error, launchAff_)
 import Effect.Aff.AVar (AVar)
 import Effect.Aff.AVar as AVar
 import Effect.Aff.Bus as Bus
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
+import Effect.Now (now)
 import Effect.Uncurried (mkEffectFn1)
 import Foreign.Object as O
 import MapGL (Viewport, ClickInfo)
@@ -23,13 +26,12 @@ import MapGL as MapGL
 import Math (pow)
 import React as R
 import Record (disjointUnion)
+import UI.Component.Map.Layer.Ping as Ping
 import Unsafe.Coerce (unsafeCoerce)
 import WebMercator.LngLat (LngLat)
 import WebMercator.LngLat as LngLat
 
 --------------------------------------------------------------------------------
-
-
 data MapMessages
   = OnViewportChange Viewport
   | OnClick ClickInfo
@@ -54,6 +56,7 @@ type Props =
 type State =
   { command :: Bus.BusRW Commands
   , viewport :: MapGL.Viewport
+  , time :: Number
   , data :: Array MapPoint
   }
 
@@ -61,6 +64,7 @@ mapClass :: R.ReactClass Props
 mapClass = R.component "Map" \this -> do
   command <- Bus.make
   { messages, width, height } <- R.getProps this
+  Milliseconds time <- unInstant <$> liftEffect now
   launchAff_ $ Bus.write (IsInitialized $ snd $ Bus.split command) messages
   pure
     { componentDidMount: componentDidMount this
@@ -77,6 +81,7 @@ mapClass = R.component "Map" \this -> do
           , bearing: 0.0
           }
         , command
+        , time
         , data: [newLab]
         }
     }
@@ -100,11 +105,16 @@ mapClass = R.component "Map" \this -> do
             liftEffect $ R.modifyState this (\st -> st {data = (p : st.data)})
             
         loop
+      launchAff_ $ forever  do
+        delay $ Milliseconds 100.0
+        Milliseconds newTime <- unInstant <$> liftEffect now
+        -- Console.log $ "Updating time to " <> show newTime
+        liftEffect $ R.modifyState this _{time = newTime}
 
     render :: R.ReactThis Props State -> R.Render
     render this = do
       { messages } <- R.getProps this
-      { viewport, data:_data } <- R.getState this
+      { viewport, time } <- R.getState this
       pure $ R.createElement MapGL.mapGL
         (un MapGL.Viewport viewport `disjointUnion`
         { onViewportChange: mkEffectFn1 $ \newVp -> do
@@ -119,9 +129,11 @@ mapClass = R.component "Map" \this -> do
         , touchZoom: true
         , touchRotate: true
         })
-        [ R.createLeafElement iconLayerClass 
+        [ R.createLeafElement layerClass 
             { viewport
-            , data: _data
+            , time
+            , data: [newLab]
+            , pings: mapPointToPing <$> [newLab]
             } 
         ]
 
@@ -131,7 +143,7 @@ newLab =
       { lng: -73.973806
       , lat: 40.6993158
       }
-  , pointId: "beacon"
+  , pointId: "beaconPointId"
   }
 
 --------------------------------------------------------------------------------
@@ -144,15 +156,17 @@ type MapPoint =
   }
 
 -- | Icon Layer Component
-type IconProps =
+type LayerProps =
   { viewport :: MapGL.Viewport
   , data :: Array MapPoint
+  , pings :: Array (Ping.PingData ())
+  , time :: Number
   }
 
 type MapState = Record ()
 
-iconLayerClass :: R.ReactClass IconProps
-iconLayerClass = R.component "IconLayer" \this -> do
+layerClass :: R.ReactClass LayerProps
+layerClass = R.component "Layers" \this -> do
   props <- R.getProps this
   pure
     { render: render this
@@ -162,10 +176,20 @@ iconLayerClass = R.component "IconLayer" \this -> do
     render this = do
       props <- R.getProps this
       state <- R.getState this
-      Console.log $ unsafeCoerce props
-      Console.log $ unsafeCoerce state
-
       let vp = unwrap props.viewport
+          pingLayer = Ping.makePingLayer $ 
+                        (Ping.defaultPingProps 
+                          { id = "ping-layer"
+                          , data = props.pings
+                          -- FIXME/KILLME: turns out `currentTime` overflows and simply 
+                          -- doesn't change unless we subtract by this arbitrary timestamp
+                          -- (taken at the time of the commit)
+                          -- Maybe this is why the shader was written using fp64 ?
+                          , currentTime = props.time - 1604023421163.0
+                          , visible = true
+                          , opacity = 1.0
+                          , pickable = false 
+                          })
           iconLayer = Icon.makeIconLayer $
                         ( Icon.defaultIconProps { id = "icon-layer"
                                                 , data = map (\m -> { point: m }) props.data
@@ -173,12 +197,12 @@ iconLayerClass = R.component "IconLayer" \this -> do
                                                 , visible = true
                                                 , iconAtlas = iconUrl
                                                 , iconMapping = 
-                                                    O.insert "beacon"
+                                                    O.insert "beaconIcon"
                                                       basicIcon
                                                       O.empty
                                                 , opacity = 1.0
                                                 , getPosition = \{point} -> pointLngLat point
-                                                , getIcon = const "beacon"
+                                                , getIcon = const "beaconIcon"
                                                 , getSize = const $ 1.0
                                                 , sizeScale = (min 1.0 $ pow 1.5 (vp.zoom - 14.0)) * 18.0 * 2.0 -- copy/pasted from foam.visualizer
                                                 , onClick = mkEffectFn1 onClickPoint
@@ -186,7 +210,7 @@ iconLayerClass = R.component "IconLayer" \this -> do
                                                 })
       pure
         $ R.createLeafElement DeckGL.deckGL
-        $ DeckGL.defaultDeckGLProps { layers = [ iconLayer ], viewState = vp }
+        $ DeckGL.defaultDeckGLProps { layers = [ pingLayer, iconLayer ], viewState = vp }
 
 pointLngLat :: MapPoint -> LngLat
 pointLngLat m = LngLat.make m.coordinates
@@ -217,10 +241,16 @@ basicIcon =
   , mask: false
   }
 
-
 onClickPoint
   :: BaseLayer.PickingInfo {point :: MapPoint}
   -> Effect  Boolean
 onClickPoint {object: {point}} = do 
   Console.log $ unsafeCoerce $ point.coordinates
   pure true
+
+mapPointToPing :: MapPoint -> Ping.PingData ()
+mapPointToPing p =
+  { position: LngLat.make p.coordinates
+  , radius: 200.0
+  , color: [50, 150, 255, 125]
+  }
