@@ -82,7 +82,7 @@ mapClass = R.component "Map" \this -> do
           }
         , command
         , time
-        , data: [newLab]
+        , data: [newLab, jengaTower]
         }
     }
   where
@@ -132,8 +132,8 @@ mapClass = R.component "Map" \this -> do
         [ R.createLeafElement layerClass 
             { viewport
             , time
-            , data: [newLab]
-            , pings: mapPointToPing <$> [newLab]
+            , data: [newLab, jengaTower]
+            , pings: mapPointToPing <$> [newLab, jengaTower]
             } 
         ]
 
@@ -143,7 +143,16 @@ newLab =
       { lng: -73.973806
       , lat: 40.6993158
       }
-  , pointId: "beaconPointId"
+  , pointId: "New Lab"
+  }
+
+jengaTower :: MapPoint
+jengaTower =
+  { coordinates:
+      { lng: -74.009288
+      , lat: 40.717795
+      }
+  , pointId: "54 Leonard st"
   }
 
 --------------------------------------------------------------------------------
