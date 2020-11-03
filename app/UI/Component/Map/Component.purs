@@ -4,8 +4,9 @@ import Prelude
 
 import Control.Lazy (fix)
 import Control.Monad.Rec.Class (forever)
+import Data.Array ((:), fromFoldable)
 import Data.DateTime.Instant (unInstant)
-import Data.Array ((:))
+import Data.Map as Map
 import Data.Newtype (un, unwrap)
 import Data.Tuple (snd)
 import DeckGL as DeckGL
@@ -40,6 +41,7 @@ data Commands
   = SetViewport' Viewport
   | AskViewport' (AVar Viewport)
   | NewPoint' MapPoint
+  | RemovePing' String
 
 data Messages
   = IsInitialized (Bus.BusW Commands)
@@ -58,6 +60,7 @@ type State =
   , viewport :: MapGL.Viewport
   , time :: Number
   , data :: Array MapPoint
+  , pings :: Map.Map String (Ping.PingData ())
   }
 
 mapClass :: R.ReactClass Props
@@ -82,7 +85,8 @@ mapClass = R.component "Map" \this -> do
           }
         , command
         , time
-        , data: [newLab, jengaTower]
+        , data: []
+        , pings: Map.empty
         }
     }
   where
@@ -102,19 +106,33 @@ mapClass = R.component "Map" \this -> do
           AskViewport' var -> liftEffect (R.getState this) >>= \{viewport} -> AVar.put viewport var
           NewPoint' p -> do 
             Console.log $ "Map Component received point " <> unsafeCoerce p
-            liftEffect $ R.modifyState this (\st -> st {data = (p : st.data)})
-            
+            liftEffect $ R.modifyState this \st -> st 
+              { data = p : st.data
+              , pings = Map.insert p.pointId (mapPointToPing p) st.pings
+              }
+            Bus.write (RemovePing' p.pointId) command
+          RemovePing' pid -> do
+            delay (Milliseconds 5000.0)
+            st <- liftEffect $ R.getState this
+            liftEffect $ R.writeState this st {pings = Map.delete pid st.pings}
         loop
+
       launchAff_ $ forever  do
         delay $ Milliseconds 100.0
         Milliseconds newTime <- unInstant <$> liftEffect now
         -- Console.log $ "Updating time to " <> show newTime
         liftEffect $ R.modifyState this _{time = newTime}
+        --- seed the map values
+      launchAff_ do
+        delay (Milliseconds 5000.0)
+        Bus.write (NewPoint' newLab) command
+        Bus.write (NewPoint' jengaTower) command
+
 
     render :: R.ReactThis Props State -> R.Render
     render this = do
       { messages } <- R.getProps this
-      { viewport, time } <- R.getState this
+      { viewport, time, data:d, pings } <- R.getState this
       pure $ R.createElement MapGL.mapGL
         (un MapGL.Viewport viewport `disjointUnion`
         { onViewportChange: mkEffectFn1 $ \newVp -> do
@@ -132,8 +150,8 @@ mapClass = R.component "Map" \this -> do
         [ R.createLeafElement layerClass 
             { viewport
             , time
-            , data: [newLab, jengaTower]
-            , pings: mapPointToPing <$> [newLab, jengaTower]
+            , data:d
+            , pings
             } 
         ]
 
@@ -168,7 +186,7 @@ type MapPoint =
 type LayerProps =
   { viewport :: MapGL.Viewport
   , data :: Array MapPoint
-  , pings :: Array (Ping.PingData ())
+  , pings :: Map.Map String (Ping.PingData ())
   , time :: Number
   }
 
@@ -189,7 +207,7 @@ layerClass = R.component "Layers" \this -> do
           pingLayer = Ping.makePingLayer $ 
                         (Ping.defaultPingProps 
                           { id = "ping-layer"
-                          , data = props.pings
+                          , data = fromFoldable $ Map.values props.pings
                           -- FIXME/KILLME: turns out `currentTime` overflows and simply 
                           -- doesn't change unless we subtract by this arbitrary timestamp
                           -- (taken at the time of the commit)
