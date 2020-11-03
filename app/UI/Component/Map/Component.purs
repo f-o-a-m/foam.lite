@@ -4,8 +4,9 @@ import Prelude
 
 import Control.Lazy (fix)
 import Control.Monad.Rec.Class (forever)
-import Data.DateTime.Instant (unInstant)
 import Data.Array ((:))
+import Data.DateTime.Instant (unInstant)
+import Data.Map as Map
 import Data.Newtype (un, unwrap)
 import Data.Tuple (snd)
 import DeckGL as DeckGL
@@ -40,6 +41,7 @@ data Commands
   = SetViewport' Viewport
   | AskViewport' (AVar Viewport)
   | NewPoint' MapPoint
+  | RemovePing' String
 
 data Messages
   = IsInitialized (Bus.BusW Commands)
@@ -103,6 +105,9 @@ mapClass = R.component "Map" \this -> do
           NewPoint' p -> do 
             Console.log $ "Map Component received point " <> unsafeCoerce p
             liftEffect $ R.modifyState this (\st -> st {data = (p : st.data)})
+          RemovePing' pid -> do
+            delay (Milliseconds 5000.0)
+
             
         loop
       launchAff_ $ forever  do
@@ -168,7 +173,7 @@ type MapPoint =
 type LayerProps =
   { viewport :: MapGL.Viewport
   , data :: Array MapPoint
-  , pings :: Array (Ping.PingData ())
+  , pings :: Map.Map String (Ping.PingData ())
   , time :: Number
   }
 
@@ -189,7 +194,7 @@ layerClass = R.component "Layers" \this -> do
           pingLayer = Ping.makePingLayer $ 
                         (Ping.defaultPingProps 
                           { id = "ping-layer"
-                          , data = props.pings
+                          , data = fromFoldable $ Map.values props.pings
                           -- FIXME/KILLME: turns out `currentTime` overflows and simply 
                           -- doesn't change unless we subtract by this arbitrary timestamp
                           -- (taken at the time of the commit)
