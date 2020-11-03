@@ -86,7 +86,7 @@ component =
     handleAction = case _ of
       Initialize -> do
         AppEnv {web3Provider, contracts: {relayableNFT}} <- ask
-        void $ H.subscribe $ ES.effectEventSource (\emitter -> do
+        void $ H.subscribe $ ES.effectEventSource \emitter -> do
           let 
               filters = 
                 { mint: eventFilter (Proxy :: Proxy RNFT.MintedByRelay) relayableNFT
@@ -148,7 +148,12 @@ component =
                     Console.log $ "Polling RelayableNFT terminated by app at block " <> show receipt.blockNumber
                 liftEffect $ ES.emit emitter $ SendToastMsg {_type: Toast.Warn, message: "Event filter terminated!"}
           pure $ Finalizer $ launchAff_ $ killFiber (error "Component teardown") fibre
-          )
+        let successfulStartMsg = 
+                { _type: Toast.Info
+                , message: "Monitoring Ethereum for FOAM Lite transactions."
+                }
+        _ <- H.query Toast._toast unit $ H.tell (Toast.DisplayMsg successfulStartMsg)
+        pure unit
       SendToastMsg msg -> do
         _ <- H.query Toast._toast unit $ H.tell (Toast.DisplayMsg msg)
         pure unit

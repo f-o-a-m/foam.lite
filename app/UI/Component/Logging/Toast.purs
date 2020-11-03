@@ -58,10 +58,7 @@ component =
   where
     initialState :: State
     initialState = 
-      { toastMsg: Just
-          { _type: Success
-          , message: "Woo!"
-          }
+      { toastMsg: Nothing
       }
 
     handleAction :: Action -> H.HalogenM State Action () Message m Unit
