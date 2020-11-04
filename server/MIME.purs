@@ -35,9 +35,6 @@ instance fromStringMimeParsePlaintext :: FromString a => MimeParse String PlainT
 instance showMimeRenderPlaintext :: Show a => MimeRender a PlainText String where
   mimeRender _ = show
 
-instance showAllMimeRenderPlaintext :: Show a => AllMimeRender a PlainText String where
-  allMimeRender p x = pure (Tuple (getMediaType p) (mimeRender p x))
-
 instance hasMediaTypeOctetStream :: HasMediaType OctetStream where
   getMediaType _ = applicationOctetStream
 
@@ -61,9 +58,6 @@ instance fromByteStringMimeParseOctetStream :: FromByteString a => MimeParse BS.
 
 instance toByteStringMimeRenderOctetStream :: ToByteString a => MimeRender a OctetStream BS.ByteString where
   mimeRender _ = toByteString
-
-instance toByteStringAllMimeRenderOctetStream :: ToByteString a => AllMimeRender a OctetStream BS.ByteString where
-  allMimeRender p x = pure (Tuple (getMediaType p) (mimeRender p x))
 
 -- Wrapper to get around orphan instances of Address, HexString etc.
 newtype TroutWrapper a = TroutWrapper a
