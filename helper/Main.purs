@@ -188,7 +188,7 @@ readUIntN size = do
 mkSubcommand :: forall a. String -> String -> Parser a -> Mod CommandFields a
 mkSubcommand sc desc parse = command sc subparserInfo
   where subparserInfo = info (parse <**> helper) commandDesc
-        commandDesc = (fullDesc <> progDesc desc <> header ("foam5g-helper-" <> sc <> " - " <> desc))
+        commandDesc = (fullDesc <> progDesc desc <> header ("foam.lite-helper-" <> sc <> " - " <> desc))
 
 parseSignTransferOptions :: Parser SignTransferOptions
 parseSignTransferOptions = ado
@@ -300,8 +300,8 @@ main :: Effect Unit
 main = runHelper =<< execParser opts
   where opts = info (parseSubcommand <**> helper)
           (  fullDesc
-          <> progDesc "Helpers for the FOAM5G App"
-          <> header "foam5g-helper - a reference for the rest of us" 
+          <> progDesc "Helpers for the FOAM.lite App"
+          <> header "foam.lite-helper - a reference for the rest of us" 
           )
 
 readDataSource :: DataSource -> Effect ByteString

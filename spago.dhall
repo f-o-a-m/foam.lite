@@ -1,4 +1,4 @@
-{ name = "foam5g-app"
+{ name = "foam.lite-app"
 , dependencies =
   [ "aff-bus", "console", "effect", "halogen", "ocelot", "psci-support", "web3", "react", "web-mercator", "deck-gl", "react-map-gl" ]
 , packages = ./packages.dhall

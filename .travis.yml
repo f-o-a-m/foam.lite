@@ -10,7 +10,7 @@ services:
   - docker
 env:
   - RELAYABLE_NFT=0x4a70091a675f2c0fae14a5f229345d6b62f932ea
-  - GA_TRACKING_ID=G-11C7S1TS4B
+  - GA_TRACKING_ID=G-WN45MV635H
 install:
   - npm install
   - make build-dapp

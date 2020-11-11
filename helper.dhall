@@ -1,4 +1,4 @@
-{ name = "foam5g-helper"
+{ name = "foam.lite-helper"
 , dependencies =
   [ "argonaut-generic"
   , "affjax"

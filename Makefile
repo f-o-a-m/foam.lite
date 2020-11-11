@@ -5,7 +5,7 @@ MAKE_PID := $(shell echo $$PPID)
 JOBS_FLAG ?= $(subst -j,,$(filter -j%, $(subst -j ,-j,$(subst --jobs ,-j,$(shell ps T | grep "^\s*$(MAKE_PID).*$(MAKE)")))))
 JOBS := $(or $(JOBS_SET),$(JOBS_SET),$(shell sh -c 'nproc 2>/dev/null || sysctl -n hw.physicalcpu 2>/dev/null'))
 
-CLIQUEBAIT_CONTAINER_NAME ?= foam5g-cliquebait
+CLIQUEBAIT_CONTAINER_NAME ?= foam.lite-cliquebait
 CLIQUEBAIT_IMAGE ?= foamspace/cliquebait:latest
 CLIQUEBAIT_LOCAL_PORT ?= 8545
 
@@ -73,12 +73,12 @@ run-server: ## Run the relayer server
 	npm run run-server
 
 bundle: ## Bundle the app for distribution
-	rm -rf foam5g.tgz dist/bundle.js dist/helper.js dist/server.js dist/package.json dist/node_modules dist/build
+	rm -rf foam.lite.tgz dist/bundle.js dist/helper.js dist/server.js dist/package.json dist/node_modules dist/build
 	mkdir -p dist/build
 	cp build/*.json dist/build
 	npm run bundle-app
 	npm run webpack:prod
 	npm run backend-dist
-	mv dist foam5g
-	tar cvzf foam5g.tgz foam5g
-	mv foam5g dist
+	mv dist foam.lite
+	tar cvzf foam.lite.tgz foam.lite
+	mv foam.lite dist
