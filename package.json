@@ -16,6 +16,7 @@
     "bundle-app": "spago -x spago.dhall bundle-app --to dist/bundle.js",
     "serve": "serve dist",
     "webpack": "DEBUG=purs-loader* DEBUG_DEPTH=100 webpack --mode development --progress --bail",
+    "webpack:prod": "NODE_ENV=production GA_TRACKING_ID='$${GA_TRACKING_ID}' webpack",
     "webpack:watch": "DEBUG=purs-loader* DEBUG_DEPTH=100 webpack --mode development --progress --display-error-details --display verbose --watch",
     "webpack:server": "webpack-dev-server --mode development --progress --inline --hot",
     "webpack:server:debug": "DEBUG=purs-loader* DEBUG_DEPTH=100 webpack-dev-server --mode development --progress --inline --hot",

@@ -17,3 +17,13 @@ script:
   - sleep 10
   - make test-dapp
   - make cliquebait-stop
+deploy:
+  provider: pages
+  local-dir: ./dist/
+  email: deploy@travis-ci.com
+  name: Deployment Bot
+  skip-cleanup: true
+  github-token: $GITHUB_TOKEN
+  keep-history: true
+  on:
+    branch: master
