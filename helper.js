@@ -22858,7 +22858,7 @@ var PS = {};
   var mkSubcommand = function (sc) {
       return function (desc) {
           return function (parse) {
-              var commandDesc = Data_Semigroup.append(Options_Applicative_Builder.infoModSemigroup)(Options_Applicative_Builder.fullDesc)(Data_Semigroup.append(Options_Applicative_Builder.infoModSemigroup)(Options_Applicative_Builder.progDesc(desc))(Options_Applicative_Builder.header("foam5g-helper-" + (sc + (" - " + desc)))));
+              var commandDesc = Data_Semigroup.append(Options_Applicative_Builder.infoModSemigroup)(Options_Applicative_Builder.fullDesc)(Data_Semigroup.append(Options_Applicative_Builder.infoModSemigroup)(Options_Applicative_Builder.progDesc(desc))(Options_Applicative_Builder.header("foam.lite-helper-" + (sc + (" - " + desc)))));
               var subparserInfo = Options_Applicative_Builder.info(Options_Applicative_Internal_Utils.apApplyFlipped(Options_Applicative_Types.parserApply)(parse)(Options_Applicative_Extra.helper))(commandDesc);
               return Options_Applicative_Builder.command(sc)(subparserInfo);
           };
@@ -23389,7 +23389,7 @@ var PS = {};
       throw new Error("Failed pattern match at Main (line 345, column 1 - line 345, column 39): " + [ v.constructor.name ]);
   };
   var main = (function () {
-      var opts = Options_Applicative_Builder.info(Options_Applicative_Internal_Utils.apApplyFlipped(Options_Applicative_Types.parserApply)(parseSubcommand)(Options_Applicative_Extra.helper))(Data_Semigroup.append(Options_Applicative_Builder.infoModSemigroup)(Options_Applicative_Builder.fullDesc)(Data_Semigroup.append(Options_Applicative_Builder.infoModSemigroup)(Options_Applicative_Builder.progDesc("Helpers for the FOAM5G App"))(Options_Applicative_Builder.header("foam5g-helper - a reference for the rest of us"))));
+      var opts = Options_Applicative_Builder.info(Options_Applicative_Internal_Utils.apApplyFlipped(Options_Applicative_Types.parserApply)(parseSubcommand)(Options_Applicative_Extra.helper))(Data_Semigroup.append(Options_Applicative_Builder.infoModSemigroup)(Options_Applicative_Builder.fullDesc)(Data_Semigroup.append(Options_Applicative_Builder.infoModSemigroup)(Options_Applicative_Builder.progDesc("Helpers for the FOAM.lite App"))(Options_Applicative_Builder.header("foam.lite-helper - a reference for the rest of us"))));
       return Control_Bind.bindFlipped(Effect.bindEffect)(runHelper)(Options_Applicative_Extra.execParser(opts));
   })();
   exports["SignTransfer"] = SignTransfer;
