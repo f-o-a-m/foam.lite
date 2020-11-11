@@ -77,7 +77,7 @@ bundle: ## Bundle the app for distribution
 	mkdir -p dist/build
 	cp build/*.json dist/build
 	npm run bundle-app
-	npm run webpack
+	npm run webpack:prod
 	npm run backend-dist
 	mv dist foam5g
 	tar cvzf foam5g.tgz foam5g
