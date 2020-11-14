@@ -8,6 +8,8 @@ addons:
     - libudev-dev
 services:
   - docker
+env:
+  - RELAYABLE_NFT=0x4a70091a675f2c0fae14a5f229345d6b62f932ea
 install:
   - npm install
   - make build-dapp
@@ -17,3 +19,14 @@ script:
   - sleep 10
   - make test-dapp
   - make cliquebait-stop
+  - make bundle
+deploy:
+  provider: pages
+  local-dir: ./dist/
+  email: deploy@travis-ci.com
+  name: Deployment Bot
+  skip-cleanup: true
+  github-token: $GITHUB_TOKEN
+  keep-history: true
+  on:
+    branch: main

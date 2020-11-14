@@ -1,4 +1,4 @@
-{ name = "foam5g-server"
+{ name = "foam.lite-server"
 , dependencies =
   [ "argonaut-generic"
   , "chanterelle"

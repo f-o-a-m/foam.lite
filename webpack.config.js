@@ -2,6 +2,7 @@
 
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const BrotliPlugin = require('brotli-webpack-plugin');
 const webpack = require('webpack');
 const isWebpackDevServer = process.argv.some(a => path.basename(a) === 'webpack-dev-server');
 const isWatch = process.argv.some(a => a === '--watch');
@@ -17,7 +18,7 @@ const plugins =
 ;
 
 module.exports = {
-  devtool: 'eval-source-map',
+  devtool: '', //'eval-source-map',
 
   devServer: {
     host: '0.0.0.0',
@@ -78,8 +79,24 @@ module.exports = {
     modules: [ 'node_modules' ],
     extensions: [ '.purs', '.js']
   },
-
+  optimization: {
+    splitChunks: {
+      cacheGroups: {
+        commons: {
+          test: /[\\/]node_modules[\\/]/,
+          name: 'vendors',
+          chunks: 'all'
+        }
+      }
+    }
+  },
   plugins: [
+    new BrotliPlugin({
+      asset: '[path].br[query]',
+      test: /\.(js|css|html|svg)$/,
+      threshold: 10240,
+      minRatio: 0.8
+    }),
     new webpack.DefinePlugin({
     'process.env.URL': JSON.stringify(process.env.URL),
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),

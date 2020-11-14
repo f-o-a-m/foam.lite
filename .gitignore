@@ -16,12 +16,8 @@
 */output/
 dapp/Contracts/**/*.purs
 contracts/merged/
-dist/bundle.js
-dist/helper.js
-dist/server.js
-dist/package.json
-dist/node_modules/
-dist/build/
+dist/*
+dist/**/*
 deployment/keys.txt
 foam5g.tgz
 package-lock.json
