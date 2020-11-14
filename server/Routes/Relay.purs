@@ -2,7 +2,6 @@ module Routes.Relay where
 
 import Prelude
 
-import Chanterelle.Internal.Logging (LogLevel(..), log)
 import Contracts.RelayableNFT as RNFT
 import Control.Monad.Except (ExceptT, except, throwError, withExceptT)
 import Control.Monad.Reader (ask)
@@ -11,7 +10,6 @@ import DApp.Relay (SignedRelayedMessage, SignedRelayedTransfer(..), recoverRelay
 import DApp.Relay.Types (DecodedMessage(..), InterpretedDecodedMessage, decodePackedMessage, interpretDecodedMessage)
 import DApp.Util (makeTxOpts, widenUIntN32)
 import Data.Argonaut (class DecodeJson, decodeJson)
-import Data.ByteString (Encoding(..))
 import Data.ByteString as BS
 import Data.Either (Either(..), either, hush)
 import Data.Maybe (Maybe(..), maybe)
@@ -25,6 +23,7 @@ import Network.Ethereum.Web3.Types (RpcError(..))
 import Nodetrout (HTTPError, error400, error500)
 import Type.Quotient (mkQuotient)
 import Type.Trout (type (:/), type (:<|>), type (:=), type (:>), Capture, ReqBody, Resource)
+import Type.Trout.ContentType.JSON (JSON)
 import Type.Trout.Method (Post, Get)
 import Types (AppM)
 
@@ -42,9 +41,9 @@ instance fromStringRelayRequestBody :: FromString RelayRequestBody where
   fromString = map (RelayRequestBody <<< toByteString) <<< (fromString :: String -> Either String HexString)
 
 type RelayRoute = "relay" := ("relay" :/ RelaySubroutes)
-type RelaySubroutes =     ("submit" := "submit" :/ ReqBody RelayRequestBody (PlainText :<|> OctetStream) :> Resource (Post HexString PlainText))
-                    :<|>  ("validate" := "validate" :/ ReqBody RelayRequestBody ((PlainText :<|> OctetStream)) :> Resource (Post (InterpretedDecodedMessage DAppMessage) PlainText))
-                    :<|>  ("nonce" := "nonce" :/ Capture "address" (TroutWrapper Address) :> Resource (Get BigNumber PlainText))
+type RelaySubroutes =     ("submit" := "submit" :/ ReqBody RelayRequestBody (PlainText :<|> OctetStream) :> Resource (Post HexString (PlainText :<|> OctetStream)))
+                    :<|>  ("validate" := "validate" :/ ReqBody RelayRequestBody ((PlainText :<|> OctetStream)) :> Resource (Post (InterpretedDecodedMessage DAppMessage) JSON))
+                    :<|>  ("nonce" := "nonce" :/ Capture "address" (TroutWrapper Address) :> Resource (Get BigNumber (PlainText :<|> OctetStream)))
                     :<|>  ("tx_status" := "status" :/ Capture "txhash" (TroutWrapper HexString) :> Resource (Get HexString PlainText))
 
 data TxStatus = Mined TransactionStatus | Mempool | Nonexistent | Invalid

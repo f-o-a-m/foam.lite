@@ -9,6 +9,7 @@ import Data.Either (Either(..))
 import Data.Maybe (maybe)
 import Data.MediaType.Common (applicationOctetStream, textPlain)
 import Data.Tuple (Tuple(..))
+import Network.Ethereum.Core.BigNumber as Eth
 import Network.Ethereum.Core.HexString as Eth
 import Network.Ethereum.Core.Signatures as Eth
 import Type.Proxy (Proxy(..))
@@ -52,6 +53,9 @@ instance toByteStringIdentity :: ToByteString BS.ByteString where
 
 instance toByteStringHexString :: ToByteString Eth.HexString where
   toByteString = Eth.toByteString
+
+instance toByteStringBigNumber :: ToByteString Eth.BigNumber where
+  toByteString = toByteString <<< Eth.toHexString
 
 instance fromByteStringMimeParseOctetStream :: FromByteString a => MimeParse BS.ByteString OctetStream a where
   mimeParse _ = fromByteString
