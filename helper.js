@@ -22577,10 +22577,10 @@ var PS = {};
                               };
                               return Control_Monad_Error_Class.throwError(Effect_Aff.monadThrowAff)(Effect_Exception.error("Got status " + (Data_Show.show(Affjax_StatusCode.showStatusCode)(res.value0.status) + (": " + res.value0.body))));
                           };
-                          throw new Error("Failed pattern match at Main (line 320, column 7 - line 325, column 81): " + [ res.constructor.name ]);
+                          throw new Error("Failed pattern match at Main (line 319, column 7 - line 324, column 81): " + [ res.constructor.name ]);
                       });
                   };
-                  throw new Error("Failed pattern match at Main (line 316, column 3 - line 325, column 81): " + [ mEP.constructor.name ]);
+                  throw new Error("Failed pattern match at Main (line 315, column 3 - line 324, column 81): " + [ mEP.constructor.name ]);
               });
           })());
       };
@@ -22626,7 +22626,7 @@ var PS = {};
       if (v instanceof Raw) {
           return Control_Applicative.pure(Effect.applicativeEffect)(v.value0);
       };
-      throw new Error("Failed pattern match at Main (line 307, column 1 - line 307, column 50): " + [ v.constructor.name ]);
+      throw new Error("Failed pattern match at Main (line 306, column 1 - line 306, column 50): " + [ v.constructor.name ]);
   };
   var readBigNumber = (function () {
       var hexRegex = Partial_Unsafe.unsafePartialBecause("we're compiling a known-good regex")(function (dictPartial) {
@@ -22970,12 +22970,12 @@ var PS = {};
                                       return Control_Applicative.pure(Effect_Aff.applicativeAff)(maddress.value0);
                                   });
                               };
-                              throw new Error("Failed pattern match at Main (line 339, column 14 - line 343, column 32): " + [ maddress.constructor.name ]);
+                              throw new Error("Failed pattern match at Main (line 338, column 14 - line 342, column 32): " + [ maddress.constructor.name ]);
                           };
-                          throw new Error("Failed pattern match at Main (line 334, column 53 - line 343, column 32): " + [ v1.constructor.name ]);
+                          throw new Error("Failed pattern match at Main (line 333, column 53 - line 342, column 32): " + [ v1.constructor.name ]);
                       });
                   };
-                  throw new Error("Failed pattern match at Main (line 332, column 3 - line 343, column 32): " + [ v.constructor.name ]);
+                  throw new Error("Failed pattern match at Main (line 331, column 3 - line 342, column 32): " + [ v.constructor.name ]);
               };
           };
       };
@@ -23005,7 +23005,7 @@ var PS = {};
                   if (v.value0.dataSource instanceof Data_Maybe.Nothing) {
                       return Control_Monad_Error_Class.throwError(Control_Monad_Error_Class.monadThrowEffect)(Effect_Exception.error("Missing DApp Message data: try --lat and --lon, --arb (or all three) to generate a message from args, or supply one directly with--stdin, --file, or --hex"))();
                   };
-                  throw new Error("Failed pattern match at Main (line 353, column 16 - line 356, column 191): " + [ v.value0.dataSource.constructor.name ]);
+                  throw new Error("Failed pattern match at Main (line 352, column 16 - line 355, column 191): " + [ v.value0.dataSource.constructor.name ]);
               })();
               var unsigned = {
                   nonce: v.value0.nonce,
@@ -23062,10 +23062,10 @@ var PS = {};
                                           if (v1 instanceof Data_Either.Right) {
                                               return Control_Apply.applySecond(Effect_Aff.applyAff)(successHook(v1.value0))(Control_Applicative.pure(Effect_Aff.applicativeAff)(v1.value0));
                                           };
-                                          throw new Error("Failed pattern match at Main (line 376, column 43 - line 378, column 57): " + [ v1.constructor.name ]);
+                                          throw new Error("Failed pattern match at Main (line 375, column 43 - line 377, column 57): " + [ v1.constructor.name ]);
                                       });
                                   };
-                                  throw new Error("Failed pattern match at Main (line 373, column 11 - line 378, column 57): " + [ maybeProvider.constructor.name ]);
+                                  throw new Error("Failed pattern match at Main (line 372, column 11 - line 377, column 57): " + [ maybeProvider.constructor.name ]);
                               };
                           };
                       };
@@ -23173,7 +23173,7 @@ var PS = {};
                       if (m instanceof ByPrivateKey) {
                           return Control_Applicative.pure(Effect_Aff.applicativeAff)(Network_Ethereum_Core_Signatures.privateToAddress(m.value0));
                       };
-                      throw new Error("Failed pattern match at Main (line 409, column 34 - line 412, column 54): " + [ m.constructor.name ]);
+                      throw new Error("Failed pattern match at Main (line 408, column 34 - line 411, column 54): " + [ m.constructor.name ]);
                   };
                   var pollTxr$prime = function (tokenName) {
                       return function (txh) {
@@ -23184,7 +23184,7 @@ var PS = {};
                               if (v1.status instanceof Network_Ethereum_Web3_Types_Types.Failed) {
                                   return Chanterelle_Internal_Logging.log(Network_Ethereum_Web3_Types_Types.monadEffectWeb3)(Chanterelle_Internal_Logging["Error"].value)(tokenName + " transfer failed");
                               };
-                              throw new Error("Failed pattern match at Main (line 415, column 11 - line 417, column 66): " + [ v1.status.constructor.name ]);
+                              throw new Error("Failed pattern match at Main (line 414, column 11 - line 416, column 66): " + [ v1.status.constructor.name ]);
                           });
                       };
                   };
@@ -23263,7 +23263,7 @@ var PS = {};
                       if (m instanceof ByPrivateKey) {
                           return Control_Applicative.pure(Effect_Aff.applicativeAff)(Network_Ethereum_Core_Signatures.privateToAddress(m.value0));
                       };
-                      throw new Error("Failed pattern match at Main (line 438, column 34 - line 441, column 54): " + [ m.constructor.name ]);
+                      throw new Error("Failed pattern match at Main (line 437, column 34 - line 440, column 54): " + [ m.constructor.name ]);
                   };
                   return Control_Bind.bind(Effect_Aff.bindAff)(runWeb3$prime(Control_Bind.bind(Network_Ethereum_Web3_Types_Types.bindWeb3)(Data_Functor.map(Network_Ethereum_Web3_Types_Types.functorWeb3)((function () {
                       var $222 = Data_Functor.map(Data_Maybe.functorMaybe)(Network_Ethereum_Core_Signatures.ChainId);
@@ -23349,7 +23349,7 @@ var PS = {};
                       if (m instanceof ByPrivateKey) {
                           return Control_Applicative.pure(Effect_Aff.applicativeAff)(Network_Ethereum_Core_Signatures.privateToAddress(m.value0));
                       };
-                      throw new Error("Failed pattern match at Main (line 459, column 34 - line 462, column 54): " + [ m.constructor.name ]);
+                      throw new Error("Failed pattern match at Main (line 458, column 34 - line 461, column 54): " + [ m.constructor.name ]);
                   };
                   return Control_Bind.bind(Effect_Aff.bindAff)(runWeb3$prime(Control_Bind.bind(Network_Ethereum_Web3_Types_Types.bindWeb3)(Data_Functor.map(Network_Ethereum_Web3_Types_Types.functorWeb3)((function () {
                       var $239 = Data_Functor.map(Data_Maybe.functorMaybe)(Network_Ethereum_Core_Signatures.ChainId);
@@ -23386,7 +23386,7 @@ var PS = {};
               })())();
           };
       };
-      throw new Error("Failed pattern match at Main (line 345, column 1 - line 345, column 39): " + [ v.constructor.name ]);
+      throw new Error("Failed pattern match at Main (line 344, column 1 - line 344, column 39): " + [ v.constructor.name ]);
   };
   var main = (function () {
       var opts = Options_Applicative_Builder.info(Options_Applicative_Internal_Utils.apApplyFlipped(Options_Applicative_Types.parserApply)(parseSubcommand)(Options_Applicative_Extra.helper))(Data_Semigroup.append(Options_Applicative_Builder.infoModSemigroup)(Options_Applicative_Builder.fullDesc)(Data_Semigroup.append(Options_Applicative_Builder.infoModSemigroup)(Options_Applicative_Builder.progDesc("Helpers for the FOAM.lite App"))(Options_Applicative_Builder.header("foam.lite-helper - a reference for the rest of us"))));
