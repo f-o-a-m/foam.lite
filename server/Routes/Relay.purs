@@ -6,7 +6,7 @@ import Contracts.RelayableNFT as RNFT
 import Control.Monad.Except (ExceptT, except, throwError, withExceptT)
 import Control.Monad.Reader (ask)
 import DApp.Message (DAppMessage, parseDAppMessage)
-import DApp.Relay (SignedRelayedMessage, SignedRelayedTransfer(..), mintRelayed, recoverRelayedTransferSignerWeb3, transferRelayed)
+import DApp.Relay (SignedRelayedMessage, SignedRelayedTransfer(..), recoverRelayedTransferSignerWeb3)
 import DApp.Relay.Types (DecodedMessage(..), InterpretedDecodedMessage, decodePackedMessage, interpretDecodedMessage)
 import DApp.Util (makeTxOpts, widenUIntN32)
 import Data.Argonaut (class DecodeJson, decodeJson)
@@ -14,19 +14,23 @@ import Data.ByteString as BS
 import Data.Either (Either(..), either, hush)
 import Data.Maybe (Maybe(..), maybe)
 import Effect.Aff.Class (liftAff)
-import MIME (class FromString, PlainText, TroutWrapper(..), fromString, toByteString)
-import Network.Ethereum.Core.HexString (HexString)
+import MIME (class FromByteString, class FromString, OctetStream, PlainText, TroutWrapper(..), fromString, toByteString)
+import Network.Ethereum.Core.HexString (HexString, fromByteString)
 import Network.Ethereum.Core.Signatures (Address, nullAddress)
-import Network.Ethereum.Web3 (BigNumber, ChainCursor(..), TransactionOptions, TransactionReceipt(..), TransactionStatus(..), UIntN, Web3, Web3Error, runWeb3)
-import Network.Ethereum.Web3.Api (eth_getTransactionReceipt)
-import Network.Ethereum.Web3.Types (NoPay)
+import Network.Ethereum.Web3 (BigNumber, ChainCursor(..), Transaction(..), TransactionReceipt(..), TransactionStatus(..), Web3Error(..), runWeb3)
+import Network.Ethereum.Web3.Api (eth_getTransaction, eth_getTransactionReceipt)
+import Network.Ethereum.Web3.Types (RpcError(..))
 import Nodetrout (HTTPError, error400, error500)
+import Type.Quotient (mkQuotient)
 import Type.Trout (type (:/), type (:<|>), type (:=), type (:>), Capture, ReqBody, Resource)
 import Type.Trout.ContentType.JSON (JSON)
 import Type.Trout.Method (Post, Get)
 import Types (AppM)
 
 newtype RelayRequestBody = RelayRequestBody BS.ByteString
+
+instance fromByteStringRelayRequestBody :: FromByteString RelayRequestBody where
+  fromByteString = pure <<< RelayRequestBody
 
 instance decodeJsonRelayRequestBody :: DecodeJson RelayRequestBody where
   decodeJson o = do
@@ -36,12 +40,23 @@ instance decodeJsonRelayRequestBody :: DecodeJson RelayRequestBody where
 instance fromStringRelayRequestBody :: FromString RelayRequestBody where
   fromString = map (RelayRequestBody <<< toByteString) <<< (fromString :: String -> Either String HexString)
 
-type SupportedResultMimes = (JSON :<|> PlainText)
 type RelayRoute = "relay" := ("relay" :/ RelaySubroutes)
-type RelaySubroutes =     ("submit" := "submit" :/ ReqBody RelayRequestBody PlainText :> Resource (Post HexString SupportedResultMimes))
-                    :<|>  ("validate" := "validate" :/ ReqBody RelayRequestBody PlainText :> Resource (Post (InterpretedDecodedMessage DAppMessage) SupportedResultMimes))
-                    :<|>  ("nonce" := "nonce" :/ Capture "address" (TroutWrapper Address) :> Resource (Get BigNumber SupportedResultMimes))
-                    :<|>  ("tx_status" := "status" :/ Capture "txhash" (TroutWrapper HexString) :> Resource (Get Boolean SupportedResultMimes))
+type RelaySubroutes =     ("submit" := "submit" :/ ReqBody RelayRequestBody (PlainText :<|> OctetStream) :> Resource (Post HexString (PlainText :<|> OctetStream)))
+                    :<|>  ("validate" := "validate" :/ ReqBody RelayRequestBody ((PlainText :<|> OctetStream)) :> Resource (Post (InterpretedDecodedMessage DAppMessage) JSON))
+                    :<|>  ("nonce" := "nonce" :/ Capture "address" (TroutWrapper Address) :> Resource (Get BigNumber (PlainText :<|> OctetStream)))
+                    :<|>  ("tx_status" := "status" :/ Capture "txhash" (TroutWrapper HexString) :> Resource (Get HexString PlainText))
+
+data TxStatus = Mined TransactionStatus | Mempool | Nonexistent | Invalid
+
+txStatusToHexString :: TxStatus -> HexString
+txStatusToHexString s =
+  let octet = case s of
+                Mined Failed -> 0
+                Mined Succeeded -> 1
+                Mempool -> 2
+                Nonexistent -> 3
+                Invalid -> 4
+   in fromByteString $ BS.singleton (mkQuotient octet)
 
 relayRoute :: _
 relayRoute = { 
@@ -106,9 +121,28 @@ getNonceRoute (TroutWrapper address) = {
   "GET": ask >>= \{ provider, relayActions } -> withExceptT web3ErrorToHTTPError (except =<< liftAff (runWeb3 provider $ relayActions.getRelayNonce address))
 }
 
-getTxStatusRoute :: TroutWrapper HexString -> { "GET" :: ExceptT HTTPError AppM Boolean }
-getTxStatusRoute (TroutWrapper txHash) =
-  let getTxStatus = do
-        (TransactionReceipt txr) <- eth_getTransactionReceipt txHash
-        pure $ txr.status == Succeeded
-  in  { "GET": ask >>= \{ provider } -> withExceptT web3ErrorToHTTPError (except =<< liftAff (runWeb3 provider getTxStatus)) }
+getTxStatusRoute :: TroutWrapper HexString -> { "GET" :: ExceptT HTTPError AppM HexString }
+getTxStatusRoute (TroutWrapper txHash) = { "GET": ask >>= (\{ provider } -> txStatusToHexString <$> go provider false) }
+  where
+    go provider isRetry = do
+      eTxr <- liftAff $ runWeb3 provider $ eth_getTransactionReceipt txHash
+      case eTxr of
+        Left (Rpc (RpcError e)) ->
+          if e.code == -32602
+          then pure Invalid
+          else checkForMempool provider isRetry
+        Left e@NullError ->
+          if isRetry
+          then throwError $ web3ErrorToHTTPError e
+          else checkForMempool provider true
+        Left x -> throwError (web3ErrorToHTTPError x)
+        Right (TransactionReceipt txr) -> pure $ Mined txr.status
+
+    checkForMempool provider isRetry = do
+      eTx <- liftAff $ runWeb3 provider $ eth_getTransaction txHash
+      case eTx of
+        Left NullError -> pure Nonexistent
+        Left e -> throwError $ web3ErrorToHTTPError e
+        Right (Transaction tx) -> case tx.blockNumber of
+          Nothing -> pure Mempool
+          Just blockNumber -> go provider isRetry -- Check again for a receipt, as txn mightve gotten mined in between the two calls

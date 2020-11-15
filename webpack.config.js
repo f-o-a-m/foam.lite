@@ -79,24 +79,24 @@ module.exports = {
     modules: [ 'node_modules' ],
     extensions: [ '.purs', '.js']
   },
-	optimization: {
-		splitChunks: {
-			cacheGroups: {
-				commons: {
-					test: /[\\/]node_modules[\\/]/,
-					name: 'vendors',
-					chunks: 'all'
-				}
-			}
-		}
-	},
+  optimization: {
+    splitChunks: {
+      cacheGroups: {
+        commons: {
+          test: /[\\/]node_modules[\\/]/,
+          name: 'vendors',
+          chunks: 'all'
+        }
+      }
+    }
+  },
   plugins: [
-		new BrotliPlugin({
-			asset: '[path].br[query]',
-			test: /\.(js|css|html|svg)$/,
-			threshold: 10240,
-			minRatio: 0.8
-		}),
+    new BrotliPlugin({
+      asset: '[path].br[query]',
+      test: /\.(js|css|html|svg)$/,
+      threshold: 10240,
+      minRatio: 0.8
+    }),
     new webpack.DefinePlugin({
     'process.env.URL': JSON.stringify(process.env.URL),
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
