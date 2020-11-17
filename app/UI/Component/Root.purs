@@ -93,9 +93,9 @@ component =
         [ HP.id_ "app-root", css "flex h-full w-full flex-wrap" ]
         [ HH.slot Header._header unit Header.component unit absurd
         , HH.div
-          [ css "flex flex-grow h-full w-full min-h-screen-sans-3-rem md:min-h-screen md:h-screen-sans-3-rem m-0 object-contain" ]
-          [ HH.div [HP.id_ "main-left-half", css "hidden md:flex md:w-1/3 lg:w-1/2"] [HH.slot Map._map unit Map.component unit (Just <<< HandleMapMessages)]
-          , HH.div [HP.id_ "main-right-half", css "flex max-w-screen w-full md:w-2/3 lg:w-1/2 overflow-x-hidden overflow-visible md:overflow-y-scroll background-gradient-event-log"] [HH.slot Table._nftTable unit Table.component unit absurd]
+          [ css "flex flex-grow h-full w-full min-h-screen-sans-3-rem lg:min-h-screen lg:h-screen-sans-3-rem m-0 object-contain" ]
+          [ HH.div [HP.id_ "main-left-half", css "hidden lg:flex lg:w-1/4 xl:w-1/2"] [HH.slot Map._map unit Map.component unit (Just <<< HandleMapMessages)]
+          , HH.div [HP.id_ "main-right-half", css "flex max-w-screen w-full lg:w-3/4 xl:w-1/2 overflow-x-hidden overflow-visible lg:overflow-y-scroll background-gradient-event-log"] [HH.slot Table._nftTable unit Table.component unit absurd]
           ]
         , HH.slot Toast._toast unit Toast.component unit absurd
         ]

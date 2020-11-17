@@ -55,7 +55,7 @@ component
   => H.Component HH.HTML Query Input Message m
 component =
   H.mkComponent
-    { initialState: const $ { entries: [], historicalEntries: [], backfillStatus: BackfillNeverStarted, blockExplorer: Nothing }
+    { initialState: const $ { entries: [] {- generateTableEntry <$> (1..50) -}, historicalEntries: [], backfillStatus: BackfillNeverStarted, blockExplorer: Nothing }
     , render
     , eval
     }
@@ -71,7 +71,7 @@ component =
           ([ tableHead ] <> renderTableEntries)
         ]
       where
-        tableHeadings = ["Type", "Tx Hash", "Minter", "Owner", "Token"]
+        tableHeadings = ["Tx Hash", "Event", "Relayer", "Token"]
         tableHead = 
           HH.thead
           []
@@ -80,25 +80,29 @@ component =
             ((\th -> HH.th [css "font-medium line-height-event-log"] [ HH.text th ]) <$> tableHeadings)
           ]
 
-        responsiveHashString str =
+        responsiveHashString' loose str =
           HH.div [ css "contents" ]
-          [ HH.span [ css "inline md:hidden" ] [HH.text $ ellipsize 2 2 str]
-          , HH.span [ css "hidden md:inline xl:hidden" ] [HH.text $ ellipsize 3 3 str]
-          , HH.span [ css "hidden xl:inline xxl:hidden" ] [HH.text $ ellipsize 4 4 str]
-          , HH.span [ css "hidden xxl:inline 3xl:hidden" ] [HH.text $ "0x" <> ellipsize 10 10 str]
-          , HH.span [ css "hidden 3xl:inline 4xl:hidden" ] [HH.text $ "0x" <> ellipsize 14 14 str]
-          , HH.span [ css "hidden 4xl:inline" ] [HH.text $ "0x" <> ellipsize 20 20 str]
+          [ HH.span [ css "inline md:hidden" ] [HH.text $ ellipsize (if loose then 3 else 2) (if loose then 3 else 2) str]
+          , HH.span [ css "hidden md:inline xl:hidden" ] [HH.text $ ellipsize (if loose then 3 else 2) (if loose then 3 else 2) str]
+          , HH.span [ css "hidden xl:inline xxl:hidden" ] [HH.text $ ellipsize (if loose then 4 else 2) (if loose then 4 else 2) str]
+          , HH.span [ css "hidden xxl:inline 3xl:hidden" ] [HH.text $ "0x" <> ellipsize (if loose then 10 else 5) (if loose then 10 else 5) str]
+          , HH.span [ css "hidden 3xl:inline 4xl:hidden" ] [HH.text $ "0x" <> ellipsize (if loose then 14 else 7) (if loose then 14 else 7) str]
+          , HH.span [ css "hidden 4xl:inline" ] [HH.text $ "0x" <> ellipsize (if loose then 20 else 10) (if loose then 20 else 10) str]
           ]
+        responsiveHashString = responsiveHashString' false
 
-        txHashLink txHash = responsiveLink (show txHash) $ blockExplorerTxLink blockExplorer txHash
-        addressLink addr = responsiveLink (show addr) $ blockExplorerAddressLink blockExplorer addr
+        txHashLink' loose txHash = responsiveLink' loose (show txHash) $ blockExplorerTxLink blockExplorer txHash
+        txHashLink = txHashLink' false
+        addressLink' loose addr = responsiveLink' loose (show addr) $ blockExplorerAddressLink blockExplorer addr
+        addressLink = addressLink' false
               
-        responsiveLink text href = case href of
-          Nothing -> HH.span [ css "inline-block" ] [ responsiveHashString text ]
+        responsiveLink' loose text href = case href of
+          Nothing -> HH.span [ css "inline-block" ] [ responsiveHashString' loose text ]
           Just href' ->
               HH.a
               [ HP.href href', HP.target "_blank", css "underline" ]
-              [ responsiveHashString text, Icons.externalLink 4 ["inline-block", "-mb-1"] [] ]
+              [ responsiveHashString' loose text, Icons.externalLink 4 ["inline-block", "-mb-1"] [] ]
+        responsiveLink = responsiveLink' false
 
         tokenIDToName tid = "Token #" <> show tid
         fullWidthCell = HP.colSpan (length tableHeadings)
@@ -127,12 +131,12 @@ component =
                   { bfs: BackfillErrored e, noNew: _, noOld: _ } -> Just $ "Searching chain history failed: " <> e
                   { bfs: _, noNew: _, noOld: _ } -> Nothing
 
-                  
+              caveatHasBorder = not null historicalEntries
               ret str =
                 HH.tr
-                [ css "line-height-event-log border-dullergray border-opacity-75" ]
+                [ css $ "line-height-event-log border-dullergray border-opacity-75" <> (if caveatHasBorder then " border-b" else "") ]
                 [ HH.td
-                  [ css "leading-loose pt-8 text-text_lightgray", fullWidthCell ]
+                  [ css $ "leading-loose pt-8 text-text_lightgray" <> (if caveatHasBorder then " pb-8" else ""), fullWidthCell ]
                   [ HH.text str ]
                 ]
            in case backfillCaveat of
@@ -141,16 +145,20 @@ component =
 
         tableEntry entry =
           let view = tableEntryView entry
-              td elem = HH.td [ css "line-height-eventlog text-text_lightgray" ] [ elem ]
+              td = HH.td [ css "line-height-eventlog text-text_lightgray" ]
+              descriptionCell = td $ case view of
+                { owner: Just o, destination: Just d } -> [ HH.text $ view._type <> " #" <> show view.tokenID <> " from ", addressLink o, HH.text " to ", addressLink d ]
+                { minter: Just m } -> [ HH.span_ [HH.text $ view._type <> " #" <> show view.tokenID <> " for "], addressLink m ]
+                _ -> [ HH.text "???" ]
+                
             in HH.tbody
                []
                [ HH.tr
                  [ css "hidden sm:table-row line-height-event-log border-b border-dullergray border-opacity-75 last:border-b-0" ]
-                 [ td (HH.text $ view._type)
-                 , td $ txHashLink view.txHash
-                 , td $ justOrNA (addressLink <$> view.minter)
-                 , td $ justOrNA (addressLink <$> view.owner)
-                 , td $ tokenImage 16 view.tokenID ""
+                 [ td [ txHashLink view.txHash ]
+                 , descriptionCell
+                 , td [ addressLink view.relayer ]
+                 , td [ tokenImage 16 view.tokenID "" ]
                  ]
                , HH.tr
                  [ css "sm:hidden border-dullergray border-opacity-75 last:border-b-0" ]
@@ -159,13 +167,13 @@ component =
 
         eventCardMint view = case view.minter of
           Just minter -> Just
-            [ HH.span [ css "w-full inline-block" ] [ HH.text "For ", addressLink minter ]
+            [ HH.span [ css "w-full inline-block" ] [ HH.text "For ", addressLink' true minter ]
             ]
           Nothing -> Nothing
         eventCardTransfer view = case (Tuple view.owner view.destination) of 
           Tuple (Just owner) (Just destination) -> Just $
-            [ HH.span [ css "w-full inline-block" ] [ HH.text "From ", addressLink owner ]
-            , HH.span [ css "w-full inline-block" ] [ HH.text "To ", addressLink destination ]
+            [ HH.span [ css "w-full inline-block" ] [ HH.text "From ", addressLink' true owner ]
+            , HH.span [ css "w-full inline-block" ] [ HH.text "To ", addressLink' true destination ]
             ]
           _ -> Nothing
 
@@ -173,7 +181,7 @@ component =
           HH.td
           [ css "text-text_lightgray", fullWidthCell ]
           [ HH.div
-            [ css "flex flex-no-wrap flex-root border rounded p-4 mt-10 h-40" ]
+            [ css "flex flex-no-wrap flex-root border rounded p-4 mt-10 h-56" ]
             [ HH.div
               [ css "w-1/3 h-full flex justify-center justify-items-center place-items-center border-r" ]
               [ HH.div [ ] [tokenImage 24 view.tokenID "mr-3" ] ]
