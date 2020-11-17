@@ -283,7 +283,7 @@ mkWeb3Monitor { historical, emitter, relayableNFT, startBlock, endBlock, web3Pro
         , transfer: handler RNFT.TransferredByRelay (\ev -> NFTTransferred { historical, ev } )
         }
   launchAff $ do
-    let windowSize = if historical then 50 else 1
+    let windowSize = if historical then 250 else 1
     when historical $ liftEffect $ ES.emit emitter $ NFTBackfillStatusUpdate Table.BackfillRunning
     ePollResult <- runWeb3 web3Provider $ event' filters handlers { windowSize, trailBy: 0 }
     let historicalOrNew = if historical then "historical" else "new"
