@@ -8,12 +8,13 @@ import DApp.Message (DAppMessage(..), parseDAppMessage)
 import Data.Array (catMaybes, filter, null)
 import Data.ByteString as BS
 import Data.Either (Either(..))
-import Data.Foldable (elem)
-import Data.Lens ((?~))
+import Data.Lens ((?~), (.~))
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, un)
 import Data.String (joinWith)
-import Effect.Aff (Aff, Milliseconds(..), delay, error, killFiber, launchAff, launchAff_)
+import Data.Tuple (Tuple(..))
+import Effect (Effect)
+import Effect.Aff (Aff, Fiber, Milliseconds(..), delay, error, killFiber, launchAff, launchAff_)
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Effect.Class.Console as Console
 import Effect.Exception (throwException)
@@ -26,8 +27,8 @@ import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
 import Halogen.Query.EventSource (Finalizer(..))
 import Halogen.Query.EventSource as ES
-import Network.Ethereum.Web3 (ChainCursor(..), Change(..), EventAction(..), MultiFilterStreamState(..), UIntN, Web3, _to, defaultTransactionOptions, event', eventFilter, runWeb3, unHex)
-import Network.Ethereum.Web3.Api (net_version)
+import Network.Ethereum.Web3 (Address, ChainCursor(..), Change(..), EventAction(..), Filter, MultiFilterStreamState(..), Provider, UIntN, Web3, _fromBlock, _to, _toBlock, defaultTransactionOptions, event', eventFilter, runWeb3, unHex)
+import Network.Ethereum.Web3.Api (eth_blockNumber, net_version)
 import Network.Ethereum.Web3.Solidity.Sizes (S256)
 import Ocelot.HTML.Properties (css)
 import Partial.Unsafe (unsafeCrashWith)
@@ -53,6 +54,7 @@ data Query a
 data Action
   = Initialize
   | NewNFTEvent {change :: Change, event :: NFTEvent, message :: DAppMessage}
+  | NFTBackfillStatusUpdate Table.BackfillStatus
   | HandleMapMessages MapMessages
   | SendToastMsg Toast.ToastMsg
   | WindowResized
@@ -69,8 +71,8 @@ type Slots =
   )
 
 data NFTEvent
-  = NFTTransferred RNFT.TransferredByRelay
-  | NFTMint RNFT.MintedByRelay
+  = NFTTransferred { historical :: Boolean, ev :: RNFT.TransferredByRelay }
+  | NFTMint { historical :: Boolean, ev :: RNFT.MintedByRelay }
 
 component
   :: ∀ m.
@@ -131,10 +133,13 @@ component =
         case maybeWeb3Provider of 
           Nothing -> sendToast { _type: Toast.Error, message: "No Web3 provider detected, consider installing MetaMask" }
           Just web3Provider -> do
-            eNetVer <- liftAff (runWeb3 web3Provider net_version)
-            case eNetVer of
+            eNetProps <- liftAff <<< runWeb3 web3Provider $ do
+              netVersion <- net_version
+              chainHeadBlockNumber <- eth_blockNumber
+              pure { netVersion, chainHeadBlockNumber }
+            case eNetProps of
               Left _ -> sendToast { _type: Toast.Error, message: "Couldn't determine Ethereum network we are connected to" }
-              Right netVersion -> case FO.lookup netVersion contracts.relayableNFT of
+              Right { netVersion, chainHeadBlockNumber } -> case FO.lookup netVersion contracts.relayableNFT of
                 Nothing -> do
                   let knownNetworks = FO.keys contracts.relayableNFT
                       toastableNetworks = filter (_.includeInToast) <<< catMaybes $ networkIDMeta <$> knownNetworks 
@@ -147,95 +152,44 @@ component =
                   sendToast { _type: Toast.Error, message: "Unsupported network, please connect to one of: " <> toastableNetworksStr }
                 Just rnft -> do
                   let relayableNFT = rnft.address
+                      relayableNFTDeployBlock = rnft.blockNumber
                       netMeta = networkIDMeta netVersion
                   case netMeta of
                     Nothing -> pure unit
                     Just { blockExplorer } -> void $ H.query Table._nftTable unit $ H.tell (Table.BlockExplorerUpdated blockExplorer)
                   
-                  toastReadyNetworkName <- case netMeta of
-                    Nothing -> pure "Ethereum"
-                    Just { friendlyName } -> pure friendlyName
+                  let toastReadyNetworkName = case netMeta of
+                        Nothing -> "Ethereum"
+                        Just { friendlyName } -> friendlyName
                   
                   void $ H.subscribe $ ES.effectEventSource \emitter -> do
                     -- trigger a dummy WindowResized event every 250ms, just in case a 
                     -- resize got lost somewhere along the way
-                    resizeRefreshTimeout <- setInterval 250 $ do
-                      ES.emit emitter $ WindowResized
+                    resizeRefreshTimeout <- setInterval 250 (ES.emit emitter WindowResized)
 
                     -- now we can actually set up web3 etc
-                    let 
-                        filters = 
-                          { mint: eventFilter (Proxy :: Proxy RNFT.MintedByRelay) relayableNFT
-                          , transfer: eventFilter (Proxy :: Proxy RNFT.TransferredByRelay) relayableNFT
-                          }
-                        -- This is just an ad hoc way of combining both handlers in one function since they do the
-                        -- same thing anyway
-                        handler 
-                          :: forall e a. Newtype e (Record (tokenID :: UIntN S256 | a))
-                          => (Record (tokenID :: UIntN S256 | a) -> e) 
-                          -> (e -> NFTEvent) 
-                          -> e 
-                          -> ReaderT Change Web3 EventAction
-                        handler constructor actionWrapper e = do
-                          Console.log "Received event"
-                          Console.log $ unsafeCoerce e
-                          c@(Change{blockNumber}) <- ask
-                          let tokenID = (un constructor e).tokenID 
-                              txOpts = defaultTransactionOptions # _to ?~ relayableNFT
-                          eRes <- lift $ RNFT.tokenData txOpts (BN blockNumber) {tokenId: tokenID}
-                          liftEffect case eRes of
-                            Left err -> do
-                              Console.log $ unsafeCoerce err
-                              ES.emit emitter $ SendToastMsg 
-                                { _type: Toast.Error
-                                , message: "Couldn't read tokenData for token " <> show tokenID
-                                }
-                            Right res -> case parseDAppMessage (BS.fromUTF8 res) of
-                              Left err -> do
-                                Console.log "Error Decoding DAppMessage"
-                                Console.log $ unsafeCoerce err
-                                ES.emit emitter $ SendToastMsg 
-                                  { _type: Toast.Error
-                                  , message: "Couldn't parse token message for token " <> show tokenID
-                                  }
-                              Right message ->  do
-                                Console.log "Emmitting NewNFTEvent"
-                                ES.emit emitter $ NewNFTEvent 
-                                  { change: c
-                                  , event: actionWrapper e, message
-                                  }
-                          pure ContinueEvent
-                        handlers = 
-                          { mint: handler RNFT.MintedByRelay NFTMint
-                          , transfer: handler RNFT.TransferredByRelay NFTTransferred
-                          }
-                    fibre <- launchAff $ do
-                      ePollResult <- runWeb3 web3Provider $ event' filters handlers {windowSize:1, trailBy:0}
-                      case ePollResult of
-                        Left web3Error -> liftEffect do 
-                          let message = "Error encountered while filtering for RelayableNFT events."
-                          ES.emit emitter $ SendToastMsg $ {_type: Toast.Error, message }
-                          throwException $ error $ show web3Error
-                        Right result -> do
-                          case result of
-                            Left (MultiFilterStreamState {currentBlock}) -> 
-                              Console.log $ "Polling RelayableNFT terminated by Filter at block " <> show currentBlock
-                            Right receipt ->
-                              Console.log $ "Polling RelayableNFT terminated by app at block " <> show receipt.blockNumber
-                          liftEffect $ ES.emit emitter $ SendToastMsg {_type: Toast.Warn, message: "Event filter terminated!"}
+                    historyFiber <- mkWeb3Monitor { historical: true, emitter, relayableNFT, web3Provider, startBlock: BN relayableNFTDeployBlock, endBlock: BN chainHeadBlockNumber }
+                    forwardFiber <- mkWeb3Monitor { historical: false, emitter, relayableNFT, web3Provider, startBlock: BN chainHeadBlockNumber, endBlock: Latest }
+
                     ES.emit emitter $ SendToastMsg { _type: Toast.Info, message: "Monitoring " <> toastReadyNetworkName <> " for FOAM Lite transactions" }
                     pure $ Finalizer $ do
                       clearInterval resizeRefreshTimeout
-                      launchAff_ $ killFiber (error "Component teardown") fibre
+                      launchAff_ do
+                        killFiber (error "Component teardown") historyFiber
+                        killFiber (error "Component teardown") forwardFiber
+
       SendToastMsg msg -> do
         Console.log $ "Received toast: " <> show msg._type <> " | " <> msg.message
         void $ H.query Toast._toast unit $ H.tell (Toast.DisplayMsg msg)
+      NFTBackfillStatusUpdate bfs -> do
+        void $ H.query Table._nftTable unit $ H.tell (Table.BackfillStatusUpdated bfs)
       NewNFTEvent {change: Change c, event, message} -> do
-        let tableEntry = case event of
-              NFTMint e -> Minted c.transactionHash e
-              NFTTransferred e -> Transferred c.transactionHash e
-        Console.log "Querying child table ..."
-        void $ H.query Table._nftTable unit $ H.tell (Table.InsertNewTableEntry tableEntry)
+        let (Tuple historical tableEntry) = case event of
+              NFTMint { historical, ev } -> Tuple historical $ Minted c.transactionHash ev
+              NFTTransferred { historical, ev } -> Tuple historical $ Transferred c.transactionHash ev
+            tableEv = if historical then Table.InsertHistoricalTableEntry else Table.InsertNewTableEntry
+
+        void $ H.query Table._nftTable unit $ H.tell (tableEv tableEntry)
         case message of
           ArbitraryString _ -> do
             Console.log "Got Arbitrary String"
@@ -270,3 +224,80 @@ component =
         Just leftHalfElem -> do
           { width, height } <- liftEffect $ WH.HTMLElement.getBoundingClientRect leftHalfElem
           pure { width, height }
+
+type Web3MonitorOpts =
+  { historical :: Boolean
+  , emitter :: ES.Emitter Effect Action
+  , relayableNFT :: Address
+  , startBlock :: ChainCursor
+  , endBlock :: ChainCursor
+  , web3Provider :: Provider
+  }
+mkWeb3Monitor :: Web3MonitorOpts -> Effect (Fiber Unit)
+mkWeb3Monitor { historical, emitter, relayableNFT, startBlock, endBlock, web3Provider } = do
+  let setFilterCursors :: forall e. Filter e -> Filter e
+      setFilterCursors filter = filter # _fromBlock .~ startBlock # _toBlock .~ endBlock
+      filters =
+        { mint: setFilterCursors $ eventFilter (Proxy :: Proxy RNFT.MintedByRelay) relayableNFT
+        , transfer: setFilterCursors $ eventFilter (Proxy :: Proxy RNFT.TransferredByRelay) relayableNFT
+        }
+      -- This is just an ad hoc way of combining both handlers in one function since they do the
+      -- same thing anyway
+      handler 
+        :: forall e a. Newtype e (Record (tokenID :: UIntN S256 | a))
+        => (Record (tokenID :: UIntN S256 | a) -> e) 
+        -> (e -> NFTEvent) 
+        -> e 
+        -> ReaderT Change Web3 EventAction
+      handler constructor actionWrapper e = do
+        Console.log "Received event"
+        Console.log $ unsafeCoerce e
+        c@(Change{blockNumber}) <- ask
+        let tokenID = (un constructor e).tokenID 
+            txOpts = defaultTransactionOptions # _to ?~ relayableNFT
+        eRes <- lift $ RNFT.tokenData txOpts (BN blockNumber) {tokenId: tokenID}
+        liftEffect case eRes of
+          Left err -> do
+            Console.log $ unsafeCoerce err
+            ES.emit emitter $ SendToastMsg 
+              { _type: Toast.Error
+              , message: "Couldn't read tokenData for token " <> show tokenID
+              }
+          Right res -> case parseDAppMessage (BS.fromUTF8 res) of
+            Left err -> do
+              Console.log "Error Decoding DAppMessage"
+              Console.log $ unsafeCoerce err
+              ES.emit emitter $ SendToastMsg 
+                { _type: Toast.Error
+                , message: "Couldn't parse token message for token " <> show tokenID
+                }
+            Right message ->  do
+              Console.log "Emmitting NewNFTEvent"
+              ES.emit emitter $ NewNFTEvent 
+                { change: c
+                , event: actionWrapper e, message
+                }
+        pure ContinueEvent
+      handlers = 
+        { mint: handler RNFT.MintedByRelay (\ev -> NFTMint { historical, ev } )
+        , transfer: handler RNFT.TransferredByRelay (\ev -> NFTTransferred { historical, ev } )
+        }
+  launchAff $ do
+    let windowSize = if historical then 50 else 1
+    when historical $ liftEffect $ ES.emit emitter $ NFTBackfillStatusUpdate Table.BackfillRunning
+    ePollResult <- runWeb3 web3Provider $ event' filters handlers { windowSize, trailBy: 0 }
+    let historicalOrNew = if historical then "historical" else "new"
+    case ePollResult of
+      Left web3Error -> liftEffect do 
+        let message = "Error encountered while filtering for " <> historicalOrNew <> " RelayableNFT events."
+        when historical $ liftEffect $ ES.emit emitter $ NFTBackfillStatusUpdate (Table.BackfillErrored (show web3Error))
+        ES.emit emitter $ SendToastMsg $ {_type: Toast.Error, message }
+        throwException $ error $ show web3Error
+      Right result -> do
+        case result of
+          Left (MultiFilterStreamState {currentBlock}) -> 
+            Console.log $ "Polling " <> historicalOrNew <> " RelayableNFT events terminated by Filter at block " <> show currentBlock
+          Right receipt -> do
+            Console.log $ "Polling " <> historicalOrNew <> " RelayableNFT events terminated by app at block " <> show receipt.blockNumber
+        when historical $ liftEffect $ ES.emit emitter $ NFTBackfillStatusUpdate Table.BackfillFinished
+        -- liftEffect $ ES.emit emitter $ SendToastMsg {_type: Toast.Warn, message: "Event filter (" <> historicalOrNew <> ") terminated!"}

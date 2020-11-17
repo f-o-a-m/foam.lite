@@ -4,7 +4,8 @@ import Prelude
 
 import Control.Alt ((<|>))
 import Control.Monad.Reader (class MonadAsk)
-import Data.Array (length, null, (..), (:))
+import Data.Array (length, null, (:))
+import Data.Either (Either)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Symbol (SProxy(..))
 import Data.Tuple (Tuple(..))
@@ -15,7 +16,7 @@ import Halogen.HTML.Properties as HP
 import Network.Ethereum.Core.BigNumber (embed)
 import Ocelot.HTML.Properties (css)
 import UI.Component.Logging.Icons as Icons
-import UI.Component.RelayableNFT.Types (TableEntry, generateTableEntry, tableEntryView)
+import UI.Component.RelayableNFT.Types (TableEntry, tableEntryView)
 import UI.Config (BlockExplorer, blockExplorerAddressLink, blockExplorerTxLink)
 import UI.Monad (AppEnv)
 
@@ -24,10 +25,22 @@ foreign import ellipsize :: Int -> Int -> String -> String
 _nftTable :: SProxy "nftTable"
 _nftTable = SProxy
 
-type State = { entries :: Array TableEntry, isBackfilling :: Boolean, blockExplorer :: Maybe BlockExplorer }
+data BackfillStatus = 
+    BackfillNeverStarted
+  | BackfillRunning
+  | BackfillFinished
+  | BackfillErrored String
+
+type State = { entries :: Array TableEntry
+             , historicalEntries :: Array TableEntry
+             , blockExplorer :: Maybe BlockExplorer
+             , backfillStatus :: BackfillStatus
+             }
 
 data Query a
   = InsertNewTableEntry TableEntry a
+  | InsertHistoricalTableEntry TableEntry a
+  | BackfillStatusUpdated BackfillStatus a
   | BlockExplorerUpdated (Maybe BlockExplorer) a
 
 data Action
@@ -43,14 +56,14 @@ component
   => H.Component HH.HTML Query Input Message m
 component =
   H.mkComponent
-    { initialState: const $ { entries: [], isBackfilling: true, blockExplorer: Nothing }
+    { initialState: const $ { entries: [], historicalEntries: [], backfillStatus: BackfillNeverStarted, blockExplorer: Nothing }
     , render
     , eval
     }
   where
 
     render :: forall s. State -> H.ComponentHTML Action s m
-    render { entries, isBackfilling, blockExplorer } = 
+    render { entries, historicalEntries, backfillStatus, blockExplorer } = 
       HH.div
         [ css "flex w-full px-8 md:p-8 lg:pt-20 text-center" ]
         [
@@ -99,10 +112,33 @@ component =
           ]
         justOrNA = fromMaybe (HH.text "N/A")
 
-        renderTableEntries =
-          if not null entries
-          then tableEntry <$> entries
-          else pure noEntriesYet
+        renderTableEntries = renderNewTableEntries <> historicalEntriesInfo <> renderHistoricalTableEntries
+
+        renderNewTableEntries = tableEntry <$> entries
+        renderHistoricalTableEntries = tableEntry <$> historicalEntries
+        historicalEntriesInfo =
+          let bfState@{noNew, noOld, bfs} = { noNew: null entries, noOld: null historicalEntries, bfs: backfillStatus }
+              backfillCaveat =
+                case bfState of
+                  { bfs: BackfillFinished, noNew: true, noOld: true } -> Just "No FOAM Lite events yet – go relay some messages!"
+                  { bfs: BackfillRunning, noNew: true, noOld: true } -> Just "No FOAM Lite events seen – searching chain history..."
+                  { bfs: BackfillNeverStarted, noNew: true, noOld: true } -> Just "No FOAM Lite events seen yet"
+                  { bfs: BackfillErrored e , noNew: true, noOld: true } -> Just $ "No FOAM Lite events seen yet -- searching chain history failed: " <> e
+                  { bfs: BackfillRunning, noNew: _, noOld: _ } -> Just "Searching chain history for more FOAM Lite events..."
+                  { bfs: BackfillErrored e, noNew: _, noOld: _ } -> Just $ "Searching chain history failed: " <> e
+                  { bfs: _, noNew: _, noOld: _ } -> Nothing
+
+                  
+              ret str =
+                HH.tr
+                [ css "line-height-event-log border-dullergray border-opacity-75" ]
+                [ HH.td
+                  [ css "leading-loose pt-8 text-text_lightgray", fullWidthCell ]
+                  [ HH.text str ]
+                ]
+           in case backfillCaveat of
+                Nothing -> []
+                Just bfc -> [ret bfc]
 
         tableEntry entry =
           let view = tableEntryView entry
@@ -120,18 +156,6 @@ component =
                , HH.tr
                  [ css "sm:hidden border-dullergray border-opacity-75 last:border-b-0" ]
                  [ eventCard view ]
-               ]
-
-        noEntriesYet = 
-          let backfillCaveat = 
-                if isBackfilling
-                then "checking for historical events..."
-                else "go broadcast some messages!"
-           in  HH.tr
-               [ css "line-height-event-log border-dullergray border-opacity-75" ]
-               [ HH.td
-                 [ css "leading-loose pt-8 text-text_lightgray", fullWidthCell ]
-                 [ HH.text $ "No FOAM Lite events yet — " <> backfillCaveat ]
                ]
 
         eventCardMint view = case view.minter of
@@ -180,6 +204,12 @@ component =
         handleQuery = case _ of
           InsertNewTableEntry entry next -> do
             H.modify_ (\st -> st { entries = (entry : st.entries)})
+            pure $ Just next
+          InsertHistoricalTableEntry entry next -> do
+            H.modify_ (\st -> st { historicalEntries = (entry : st.historicalEntries)})
+            pure $ Just next
+          BackfillStatusUpdated bfs next -> do
+            H.modify_ (\st -> st { backfillStatus = bfs })
             pure $ Just next
           BlockExplorerUpdated newBlockExplorer next -> do
             H.modify_ (\st -> st { blockExplorer = newBlockExplorer } )
