@@ -40,7 +40,7 @@ echo "The private key is ${PRIVATE_KEY}"
 
 # Faucet the account with some of the FungibleToken we deployed, as well
 # as some Ether to let it approve the RelayableNFT contract to spend its FungibleTokens
-node dist/helper.js faucet --private-key ${PRIVATE_KEY} --also-ether
+node dist/helper.js faucet --to-private-key ${PRIVATE_KEY} --also-ether
 
 # Approve the RelayableNFT token to spend the account's balance (and automatically execute the approve() transaction on-chain)
 node dist/helper.js approve --private-key ${PRIVATE_KEY} --submit --node-url "http://localhost:8545"

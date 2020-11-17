@@ -17,7 +17,10 @@
 dapp/Contracts/**/*.purs
 contracts/merged/
 dist/*
-dist/**/*
+!dist/*.png
+!dist/static-token-images/
+!dist/static-token-images/*
+!dist/static-token-images/**/*
 deployment/keys.txt
 foam5g.tgz
 package-lock.json

@@ -2,27 +2,33 @@ module UI.Component.RelayableNFT.Table where
 
 import Prelude
 
+import Control.Alt ((<|>))
 import Control.Monad.Reader (class MonadAsk)
-import Data.Array ((:), (..))
-import Data.Maybe (Maybe(..), maybe)
+import Data.Array (length, null, (..), (:))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Symbol (SProxy(..))
+import Data.Tuple (Tuple(..))
 import Effect.Aff.Class (class MonadAff)
 import Halogen as H
 import Halogen.HTML as HH
-import Ocelot.Block.Table as Table
+import Halogen.HTML.Properties as HP
+import Network.Ethereum.Core.BigNumber (embed)
 import Ocelot.HTML.Properties (css)
+import UI.Component.Logging.Icons as Icons
 import UI.Component.RelayableNFT.Types (TableEntry, generateTableEntry, tableEntryView)
+import UI.Config (BlockExplorer, blockExplorerAddressLink, blockExplorerTxLink)
 import UI.Monad (AppEnv)
-import UI.Style.Block.Backdrop as Backdrop
-import UI.Style.Block.Documentation as Documentation
+
+foreign import ellipsize :: Int -> Int -> String -> String
 
 _nftTable :: SProxy "nftTable"
 _nftTable = SProxy
 
-type State = Array TableEntry
+type State = { entries :: Array TableEntry, isBackfilling :: Boolean, blockExplorer :: Maybe BlockExplorer }
 
 data Query a
   = InsertNewTableEntry TableEntry a
+  | BlockExplorerUpdated (Maybe BlockExplorer) a
 
 data Action
 
@@ -37,59 +43,129 @@ component
   => H.Component HH.HTML Query Input Message m
 component =
   H.mkComponent
-    { initialState: const $ map generateTableEntry (1 .. 2)
+    { initialState: const $ { entries: [], isBackfilling: true, blockExplorer: Nothing }
     , render
     , eval
     }
   where
 
     render :: forall s. State -> H.ComponentHTML Action s m
-    render s =
-      HH.div_
-        [ Documentation.block_
-            { header: "RelaybleNFT Events Table"
-            , subheader: "Table of Mint and Transfer Events for RelaybleNFT Contract"
-            }
-            [ Backdrop.backdrop_
-              [ renderTable ]
-            ]
+    render { entries, isBackfilling, blockExplorer } = 
+      HH.div
+        [ css "flex w-full px-8 md:p-8 lg:pt-20 text-center" ]
+        [
+          HH.table
+          [ css "w-full" ]
+          ([ tableHead ] <> renderTableEntries)
         ]
       where
-        renderTable =
-          Table.table_ $
-            [ renderHeader
-            ]
-            <> renderBody
+        tableHeadings = ["Type", "Tx Hash", "Minter", "Owner", "Token"]
+        tableHead = 
+          HH.thead
+          []
+          [ HH.tr
+            [ css "hidden sm:table-row line-height-event-log border-b border-white last:border-b-0" ]
+            ((\th -> HH.th [css "font-medium line-height-event-log"] [ HH.text th ]) <$> tableHeadings)
+          ]
 
-        renderHeader =
-          Table.row_
-            [ Table.header_ [ HH.text "Type" ]
-            , Table.header_ [ HH.text "Tx Hash" ]
-            , Table.header_ [ HH.text "Minter" ]
-            , Table.header_ [ HH.text "Owner" ]
-            , Table.header_ [ HH.text "Destination" ]
-            , Table.header_ [ HH.text "Relayer" ]
-            , Table.header_ [ HH.text "Token ID" ]
-            ]
+        responsiveHashString str =
+          HH.div [ css "contents" ]
+          [ HH.span [ css "inline md:hidden" ] [HH.text $ ellipsize 2 2 str]
+          , HH.span [ css "hidden md:inline xl:hidden" ] [HH.text $ ellipsize 3 3 str]
+          , HH.span [ css "hidden xl:inline xxl:hidden" ] [HH.text $ ellipsize 4 4 str]
+          , HH.span [ css "hidden xxl:inline 3xl:hidden" ] [HH.text $ "0x" <> ellipsize 10 10 str]
+          , HH.span [ css "hidden 3xl:inline 4xl:hidden" ] [HH.text $ "0x" <> ellipsize 14 14 str]
+          , HH.span [ css "hidden 4xl:inline" ] [HH.text $ "0x" <> ellipsize 20 20 str]
+          ]
 
-        renderBody =
-          Table.row_ <$> ( renderData <$> s )
+        txHashLink txHash = responsiveLink (show txHash) $ blockExplorerTxLink blockExplorer txHash
+        addressLink addr = responsiveLink (show addr) $ blockExplorerAddressLink blockExplorer addr
+              
+        responsiveLink text href = case href of
+          Nothing -> HH.span [ css "inline-block" ] [ responsiveHashString text ]
+          Just href' ->
+              HH.a
+              [ HP.href href', HP.target "_blank", css "underline" ]
+              [ responsiveHashString text, Icons.externalLink 4 ["inline-block", "-mb-1"] [] ]
 
-        renderData :: ∀ p i. TableEntry -> Array (HH.HTML p i)
-        renderData entry =
+        tokenIDToName tid = "Token #" <> show tid
+        fullWidthCell = HP.colSpan (length tableHeadings)
+        tokenImage size tokenID extras =
+          HH.img
+          [ HP.alt $ tokenIDToName tokenID
+          , HP.title $ tokenIDToName tokenID
+          , HP.src ("/static-token-images/" <> show (tokenID `mod` (embed 3) + (embed 1)) <> ".png")
+          , css ("w-" <> show size <> " h-" <> show size <> " inline-block" <> " " <> extras)
+          ]
+        justOrNA = fromMaybe (HH.text "N/A")
+
+        renderTableEntries =
+          if not null entries
+          then tableEntry <$> entries
+          else pure noEntriesYet
+
+        tableEntry entry =
           let view = tableEntryView entry
-          in 
-            [ Table.cell  [ css "text-left" ] [ HH.text view._type ]
-            , Table.cell  [ css "text-left" ] [ HH.text view.txHash ]
-            , Table.cell  [ css "text-left" ] $ 
-                maybe [ HH.text "N/A" ] (\a -> [ HH.text a ]) view.minter
-            , Table.cell  [ css "text-left" ] $ 
-                maybe [ HH.text "N/A" ] (\a -> [ HH.text a ]) view.owner
-            , Table.cell  [ css "text-left" ] $ 
-                maybe [ HH.text "N/A" ] (\a -> [ HH.text a ]) view.destination
-            , Table.cell  [ css "text-left" ] [ HH.text view.relayer ]
-            , Table.cell  [ css "text-left" ] [ HH.text view.tokenID ]
+              td elem = HH.td [ css "line-height-eventlog text-text_lightgray" ] [ elem ]
+            in HH.tbody
+               []
+               [ HH.tr
+                 [ css "hidden sm:table-row line-height-event-log border-b border-dullergray border-opacity-75 last:border-b-0" ]
+                 [ td (HH.text $ view._type)
+                 , td $ txHashLink view.txHash
+                 , td $ justOrNA (addressLink <$> view.minter)
+                 , td $ justOrNA (addressLink <$> view.owner)
+                 , td $ tokenImage 16 view.tokenID ""
+                 ]
+               , HH.tr
+                 [ css "sm:hidden border-dullergray border-opacity-75 last:border-b-0" ]
+                 [ eventCard view ]
+               ]
+
+        noEntriesYet = 
+          let backfillCaveat = 
+                if isBackfilling
+                then "checking for historical events..."
+                else "go broadcast some messages!"
+           in  HH.tr
+               [ css "line-height-event-log border-dullergray border-opacity-75" ]
+               [ HH.td
+                 [ css "leading-loose pt-8 text-text_lightgray", fullWidthCell ]
+                 [ HH.text $ "No FOAM Lite events yet — " <> backfillCaveat ]
+               ]
+
+        eventCardMint view = case view.minter of
+          Just minter -> Just
+            [ HH.span [ css "w-full inline-block" ] [ HH.text "For ", addressLink minter ]
             ]
+          Nothing -> Nothing
+        eventCardTransfer view = case (Tuple view.owner view.destination) of 
+          Tuple (Just owner) (Just destination) -> Just $
+            [ HH.span [ css "w-full inline-block" ] [ HH.text "From ", addressLink owner ]
+            , HH.span [ css "w-full inline-block" ] [ HH.text "To ", addressLink destination ]
+            ]
+          _ -> Nothing
+
+        eventCard view =
+          HH.td
+          [ css "text-text_lightgray", fullWidthCell ]
+          [ HH.div
+            [ css "flex flex-no-wrap flex-root border rounded p-4 mt-10 h-40" ]
+            [ HH.div
+              [ css "w-1/3 h-full flex justify-center justify-items-center place-items-center border-r" ]
+              [ HH.div [ ] [tokenImage 24 view.tokenID "mr-3" ] ]
+            , HH.div
+              [ css "w-2/3 h-full flex justify-center justify-items-center place-items-center text-left px-4" ]
+              [ HH.div [ ]
+                ( [ HH.span [ css "font-semibold w-full inline-block" ] [ HH.text $ view._type <> " #" <> show view.tokenID ] ] <>
+                  ( (fromMaybe [] (eventCardMint view <|> eventCardTransfer view)) <>
+                  [ HH.span [ css "w-full inline-block" ] [ HH.text "Relayed by ", addressLink view.relayer ]
+                  , HH.span [ css "w-full inline-block" ] [ HH.text "Tx ", txHashLink view.txHash ]
+                  ])
+                )
+              ]
+            ]
+          ]
 
 
     eval :: forall i . 
@@ -103,6 +179,8 @@ component =
         handleQuery :: forall a.  Query a -> H.HalogenM State Action () Message m (Maybe a)
         handleQuery = case _ of
           InsertNewTableEntry entry next -> do
-            st <- H.get
-            H.put $ entry : st 
+            H.modify_ (\st -> st { entries = (entry : st.entries)})
+            pure $ Just next
+          BlockExplorerUpdated newBlockExplorer next -> do
+            H.modify_ (\st -> st { blockExplorer = newBlockExplorer } )
             pure $ Just next
