@@ -125,10 +125,11 @@ component =
                 case bfState of
                   { bfs: BackfillFinished, noNew: true, noOld: true } -> Just "No FOAM Lite events yet – go relay some messages!"
                   { bfs: BackfillRunning, noNew: true, noOld: true } -> Just "No FOAM Lite events seen – searching chain history..."
-                  { bfs: BackfillNeverStarted, noNew: true, noOld: true } -> Just "No FOAM Lite events seen yet"
+                  { bfs: BackfillNeverStarted, noNew: true, noOld: true } -> Just "No FOAM Lite events seen yet -- waiting to connect to Ethereum..."
                   { bfs: BackfillErrored e , noNew: true, noOld: true } -> Just $ "No FOAM Lite events seen yet -- searching chain history failed: " <> e
                   { bfs: BackfillRunning, noNew: _, noOld: _ } -> Just "Searching chain history for more FOAM Lite events..."
-                  { bfs: BackfillErrored e, noNew: _, noOld: _ } -> Just $ "Searching chain history failed: " <> e
+                  { bfs: BackfillErrored _, noNew: _, noOld: true } -> Just $ "Failed to fetch any historical FOAM Lite events"
+                  { bfs: BackfillErrored _, noNew: _, noOld: false } -> Just $ "Coudn't fetch all historical FOAM Lite events"
                   { bfs: _, noNew: _, noOld: _ } -> Nothing
 
               caveatHasBorder = not null historicalEntries
