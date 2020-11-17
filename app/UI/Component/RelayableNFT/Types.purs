@@ -8,7 +8,6 @@ import Data.Mock as Mock
 import Network.Ethereum.Core.BigNumber (BigNumber)
 import Network.Ethereum.Core.HexString (HexString)
 import Network.Ethereum.Web3 (Address, unUIntN)
-import UI.Utils (formatAddress, formatHexString)
 
 data TableEntry 
   = Minted HexString RNFT.MintedByRelay

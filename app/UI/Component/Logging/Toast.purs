@@ -3,7 +3,6 @@ module UI.Component.Logging.Toast where
 import Prelude
 
 import Control.Alt ((<|>))
-import DOM.HTML.Indexed (HTMLspan)
 import Data.Maybe (Maybe(..), isJust)
 import Data.Symbol (SProxy(..))
 import Data.Time.Duration (Milliseconds(..))
@@ -13,8 +12,7 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Halogen.HTML.Properties.ARIA as HPA
-import Ocelot.HTML.Properties ((<&>), css)
+import Ocelot.HTML.Properties (css)
 import UI.Component.Logging.Icons as Icons
 
 _toast :: SProxy "toast"
