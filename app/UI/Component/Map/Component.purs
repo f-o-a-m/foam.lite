@@ -42,12 +42,15 @@ data Commands
   | AskViewport' (AVar Viewport)
   | NewPoint' MapPoint
   | RemovePing' String
+  | WindowResized' Dimensions
 
 data Messages
   = IsInitialized (Bus.BusW Commands)
   | PublicMsg MapMessages
 
 --------------------------------------------------------------------------------
+
+type Dimensions = { width :: Number, height :: Number }
 
 type Props =
   { messages :: Bus.BusW Messages
@@ -90,6 +93,12 @@ mapClass = R.component "Map" \this -> do
         }
     }
   where
+    injectViewportDimensions :: forall r. Dimensions -> Record (viewport :: MapGL.Viewport | r) -> Record (viewport :: MapGL.Viewport | r)
+    injectViewportDimensions { width: newWidth, height: newHeight } r =
+      let (MapGL.Viewport oldVP) = r.viewport
+          newVP = oldVP { width = newWidth, height = newHeight }
+       in r { viewport = (MapGL.Viewport newVP) } 
+
     componentWillUnmount :: R.ReactThis Props State -> R.ComponentWillUnmount
     componentWillUnmount this = R.getState this >>= \{ command } ->
       launchAff_ $ do
@@ -102,6 +111,12 @@ mapClass = R.component "Map" \this -> do
       launchAff_ $ fix \loop -> do
         msg <- Bus.read command
         case msg of
+          WindowResized' newDims -> liftEffect $ do
+            { viewport: MapGL.Viewport { width, height } } <- R.getState this
+            if width /= newDims.width || height /= newDims.height
+            then R.modifyState this (injectViewportDimensions newDims)
+            else pure unit
+            
           SetViewport' vp -> liftEffect $ R.modifyState this _{viewport = vp}
           AskViewport' var -> liftEffect (R.getState this) >>= \{viewport} -> AVar.put viewport var
           NewPoint' p -> do 

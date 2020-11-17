@@ -5,14 +5,13 @@ import Prelude
 
 import Control.Lazy (fix)
 import Data.Foldable (for_)
-import Data.Int (toNumber)
 import Data.Maybe (Maybe(..))
 import Data.Symbol (SProxy(..))
 import Data.Tuple (Tuple(..))
 import Effect.Aff (launchAff_)
 import Effect.Aff.Bus as Bus
 import Effect.Aff.Class (class MonadAff, liftAff)
-import Halogen (lift, liftEffect)
+import Halogen (liftEffect)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
@@ -23,9 +22,7 @@ import ReactDOM (render) as RDOM
 import Test.Unit.Console as Console
 import UI.Component.Map.Component as Map
 import Unsafe.Coerce (unsafeCoerce)
-import Web.HTML (window)
 import Web.HTML.HTMLElement as HTMLElement
-import Web.HTML.Window as Window
 
 _map :: SProxy "map"
 _map = SProxy
@@ -40,6 +37,7 @@ data Action
 
 data Query a
   = NewPoint Map.MapPoint a
+  | WindowResized Map.Dimensions (Boolean -> a)
 
 component :: forall i m. MonadAff m => H.Component HH.HTML Query i Map.MapMessages m
 component =
@@ -70,9 +68,10 @@ eval = H.mkEval $ H.defaultEval
         H.getHTMLElementRef (H.RefLabel "map") >>= case _ of
           Nothing -> unsafeCrashWith "There must be an element with ref `map`"
           Just el' -> do
-            win <- liftEffect window
-            width <- liftEffect $ toNumber <$> Window.innerWidth win
-            height <- liftEffect $ toNumber <$> Window.innerHeight win
+            let width = 0.0
+                height = 0.0
+            -- we initialize with a width/height of zero -- we expect the root component to send us a
+            -- resize event with the actual initial size
             messages <- liftAff Bus.make
             let (Tuple messagesR messagesW) = Bus.split messages
             liftEffect $ void $ RDOM.render (R.createLeafElement Map.mapClass { messages: messagesW, width, height}) (HTMLElement.toElement el')
@@ -95,3 +94,11 @@ eval = H.mkEval $ H.defaultEval
         liftAff $ for_ mCommands $ \commandBus -> 
           Bus.write (Map.NewPoint' p) commandBus
         pure $ Just next
+      WindowResized dims next -> do
+        -- Console.log $ "Window resized event fired " <> unsafeCoerce dims
+        mCommands <- H.get
+        case mCommands of
+          Just commandBus -> do
+              liftAff $ Bus.write (Map.WindowResized' dims) commandBus
+              pure (Just $ next true)
+          Nothing -> pure (Just $ next false)

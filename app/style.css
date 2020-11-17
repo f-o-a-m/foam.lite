@@ -1,0 +1,34 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap");
+
+@tailwind base;
+
+@tailwind components;
+
+@tailwind utilities;
+
+/* Custom css */
+
+.no-hover
+{
+  pointer-events: none;
+}
+
+.background-gradient-event-log
+{
+  background-image: linear-gradient(180deg, #2B2B2B, #0E0E0E);
+}
+
+.line-height-event-log
+{
+  line-height: 5rem !important;
+}
+
+.event-log-min-height-chrome-fix {
+  min-height: calc(100% - 3rem) !important;
+}
+
+@media (min-width: 678px) {
+  .event-log-min-height-chrome-fix {
+    min-height: calc(100% - 4rem) !important;
+  }
+}

@@ -2,6 +2,8 @@ module UI.Component.Logging.Toast where
 
 import Prelude
 
+import Control.Alt ((<|>))
+import DOM.HTML.Indexed (HTMLspan)
 import Data.Maybe (Maybe(..), isJust)
 import Data.Symbol (SProxy(..))
 import Data.Time.Duration (Milliseconds(..))
@@ -10,9 +12,10 @@ import Effect.Aff.Class (class MonadAff)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
-import Ocelot.Block.Icon as Icon
-import Ocelot.Block.Toast as Toast
-import Ocelot.HTML.Properties (css)
+import Halogen.HTML.Properties as HP
+import Halogen.HTML.Properties.ARIA as HPA
+import Ocelot.HTML.Properties ((<&>), css)
+import UI.Component.Logging.Icons as Icons
 
 _toast :: SProxy "toast"
 _toast = SProxy
@@ -23,6 +26,13 @@ data MsgType
   | Info
   | Success
 
+derive instance eqMsgType :: Eq MsgType 
+instance showMsgType :: Show MsgType where
+  show Error   = "ERROR"
+  show Warn    = "WARN"
+  show Info    = "INFO"
+  show Success = "SUCCESS"
+
 
 type ToastMsg =
   { _type :: MsgType
@@ -32,6 +42,7 @@ type ToastMsg =
 
 type State = 
   { toastMsg :: Maybe ToastMsg
+  , previousToastMsg :: Maybe ToastMsg
   }
 
 data Query a 
@@ -56,46 +67,63 @@ component =
         }
     }
   where
+    pushToastMsg :: ToastMsg -> State -> State
+    pushToastMsg msg st = st { toastMsg = Just msg, previousToastMsg = Nothing }
+
+    popToastMsg :: State -> State
+    popToastMsg st = st { toastMsg = Nothing, previousToastMsg = st.toastMsg }
+
     initialState :: State
     initialState = 
       { toastMsg: Nothing
+      , previousToastMsg: Nothing
       }
 
     handleAction :: Action -> H.HalogenM State Action () Message m Unit
     handleAction = case _ of
-      Dismiss -> do
-        state <- H.get
-        H.modify_ _ { toastMsg = Nothing }
+      Dismiss -> H.modify_ popToastMsg
 
     handleQuery :: forall a.  Query a -> H.HalogenM State Action () Message m (Maybe a)
     handleQuery = case _ of
       Clear -> do
-        state <- H.get
-        H.modify_ _ { toastMsg = Nothing }
+        H.modify_ popToastMsg
         pure Nothing
       DisplayMsg msg next -> do
-        state <- H.get
-        H.modify_ _ { toastMsg = Just msg }
-        H.liftAff $ delay $ Milliseconds 5000.0
-        H.modify_ _ { toastMsg = Nothing }
-        pure (Just next)
+        H.modify_ (pushToastMsg msg)
+        if msg._type == Info || msg._type == Success
+        then do
+          H.liftAff $ delay $ Milliseconds 5000.0
+          H.modify_ popToastMsg
+          pure (Just next)
+        else pure (Just next)
 
     render :: State -> H.ComponentHTML Action () m
     render state =
-      let toastHtml = 
-            case state.toastMsg of
+      let isVisible = isJust state.toastMsg
+          baseContainerClasses = ["flex", "transition-all-positions", "duration-500", "ease-in-out", "items-center", "fixed", "inset-x-0", "bottom-0", "object-bottom", "z-10"]
+          visibleClasses = ["mb-8"]
+          hiddenClasses = ["-mb-64"]
+          containerClasses = (baseContainerClasses <> (if isVisible then visibleClasses else hiddenClasses))
+          toastClasses = ["flex", "rounded", "shadow-md", "mx-auto", "max-w-90p", "p-2", "sm:pr-8", "m:p-4", "items-center", "border", "border-dullergray", "bg-black"]
+
+          toastHtml = 
+            -- this is so that the toast message vanishes with the previous message intact, rather than the user briefly
+            -- seeing an empty square as the toast disappears.
+            -- 
+            case (state.toastMsg <|> state.previousToastMsg) of
               Nothing -> []
+              -- Nothing -> [ Icon.success [css "text-green text-2xl mr-2"] , HH.p_ [ HH.text "test toast mesage" ] ]
               Just s -> 
                 let icon = case s._type of
-                      Error -> Icon.error [css "text-red text-2xl mr-2"]
-                      Warn -> Icon.error [css "text-yellow text-2xl mr-2"]
-                      Info -> Icon.info [css "text-blue text-2xl mr-2"]
-                      Success -> Icon.success [css "text-green text-2xl mr-2"]
+                      Error -> Icons.error 6 ["hidden", "sm:inline-block"] [css "text-red text-2xl mr-2"]
+                      Warn -> Icons.warning 6 ["hidden", "sm:inline-block"] [css "text-yellow text-2xl mr-2"]
+                      Info -> Icons.info 6 ["hidden", "sm:inline-block"] [css "text-blue text-2xl mr-2"]
+                      Success -> Icons.success  6 ["hidden", "sm:inline-block"] [css "text-green text-2xl mr-2"]
                 in [ icon
                    , HH.p_ [ HH.text s.message]
                    ]
-      in Toast.toast
-           [ Toast.visible (isJust state.toastMsg) 
-           , HE.onClick $ const $ Just $ Dismiss
+      in HH.div
+           [ HP.classes (HH.ClassName <$> containerClasses)
+           , HE.onClick (const $ Just $ Dismiss)
            ]
-           toastHtml
+           [ HH.div [ HP.classes (HH.ClassName <$> toastClasses) ] toastHtml ]
