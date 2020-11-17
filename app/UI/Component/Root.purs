@@ -179,7 +179,7 @@ component =
                         killFiber (error "Component teardown") forwardFiber
 
       SendToastMsg msg -> do
-        Console.log $ "Received toast: " <> show msg._type <> " | " <> msg.message
+        -- Console.log $ "Received toast: " <> show msg._type <> " | " <> msg.message
         void $ H.query Toast._toast unit $ H.tell (Toast.DisplayMsg msg)
       NFTBackfillStatusUpdate bfs -> do
         void $ H.query Table._nftTable unit $ H.tell (Table.BackfillStatusUpdated bfs)
@@ -192,7 +192,7 @@ component =
         void $ H.query Table._nftTable unit $ H.tell (tableEv tableEntry)
         case message of
           ArbitraryString _ -> do
-            Console.log "Got Arbitrary String"
+            -- Console.log "Got Arbitrary String"
             pure unit
           Location {lat,lon} -> do
             let point =
@@ -200,7 +200,7 @@ component =
                   , pointId: unHex c.transactionHash
                   }
 
-            Console.log "Got Location, querying child ..."
+            -- Console.log "Got Location, querying child ..."
             void $ H.query Map._map unit $ H.tell (Map.NewPoint point)
             pure unit
           LocationWithArbitrary {lat,lon} -> do
@@ -208,7 +208,7 @@ component =
                   { coordinates: {lat, lng:lon}
                   , pointId: unHex c.transactionHash
                   }
-            Console.log "Got Location with arbitrary, querying child ..."
+            -- Console.log "Got Location with arbitrary, querying child ..."
             _ <- H.query Map._map unit $ H.tell (Map.NewPoint point)
             pure unit
       WindowResized -> do
@@ -250,8 +250,8 @@ mkWeb3Monitor { historical, emitter, relayableNFT, startBlock, endBlock, web3Pro
         -> e 
         -> ReaderT Change Web3 EventAction
       handler constructor actionWrapper e = do
-        Console.log "Received event"
-        Console.log $ unsafeCoerce e
+        -- Console.log "Received event"
+        -- Console.log $ unsafeCoerce e
         c@(Change{blockNumber}) <- ask
         let tokenID = (un constructor e).tokenID 
             txOpts = defaultTransactionOptions # _to ?~ relayableNFT
@@ -272,7 +272,7 @@ mkWeb3Monitor { historical, emitter, relayableNFT, startBlock, endBlock, web3Pro
                 , message: "Couldn't parse token message for token " <> show tokenID
                 }
             Right message ->  do
-              Console.log "Emmitting NewNFTEvent"
+              -- Console.log "Emmitting NewNFTEvent"
               ES.emit emitter $ NewNFTEvent 
                 { change: c
                 , event: actionWrapper e, message
