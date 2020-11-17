@@ -120,7 +120,7 @@ component =
                       Info -> Icons.info 6 ["hidden", "sm:inline-block"] [css "text-blue text-2xl mr-2"]
                       Success -> Icons.success  6 ["hidden", "sm:inline-block"] [css "text-green text-2xl mr-2"]
                 in [ icon
-                   , HH.p_ [ HH.text s.message]
+                   , HH.span [css "inline-block sm:pl-4" ] [ HH.text s.message ]
                    ]
       in HH.div
            [ HP.classes (HH.ClassName <$> containerClasses)
