@@ -12,8 +12,8 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Ocelot.HTML.Properties (css)
 import UI.Component.Logging.Icons as Icons
+import UI.Utils (css)
 
 _toast :: SProxy "toast"
 _toast = SProxy

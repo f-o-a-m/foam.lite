@@ -13,11 +13,11 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
 import Network.Ethereum.Core.BigNumber (embed)
-import Ocelot.HTML.Properties (css)
 import UI.Component.Logging.Icons as Icons
 import UI.Component.RelayableNFT.Types (TableEntry, tableEntryView)
 import UI.Config (BlockExplorer, blockExplorerAddressLink, blockExplorerTxLink)
 import UI.Monad (AppEnv)
+import UI.Utils (css)
 
 foreign import ellipsize :: Int -> Int -> String -> String
 

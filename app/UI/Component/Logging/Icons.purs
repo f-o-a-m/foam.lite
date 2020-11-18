@@ -11,8 +11,8 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
 import Halogen.HTML.Properties.ARIA as HPA
-import Ocelot.HTML.Properties ((<&>))
 import Type.Row.Homogeneous (class Homogeneous)
+import UI.Utils ((<&>))
 
 iconHTML
   :: ∀ r i

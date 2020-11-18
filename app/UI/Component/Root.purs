@@ -30,7 +30,6 @@ import Halogen.Query.EventSource as ES
 import Network.Ethereum.Web3 (Address, ChainCursor(..), Change(..), EventAction(..), Filter, MultiFilterStreamState(..), Provider, UIntN, Web3, _fromBlock, _to, _toBlock, defaultTransactionOptions, event', eventFilter, runWeb3, unHex)
 import Network.Ethereum.Web3.Api (eth_blockNumber, net_version)
 import Network.Ethereum.Web3.Solidity.Sizes (S256)
-import Ocelot.HTML.Properties (css)
 import Partial.Unsafe (unsafeCrashWith)
 import Type.Proxy (Proxy(..))
 import UI.Component.Header.Component as Header
@@ -40,6 +39,7 @@ import UI.Component.Map.Container as Map
 import UI.Component.RelayableNFT.Table as Table
 import UI.Component.RelayableNFT.Types (TableEntry(..))
 import UI.Config (AppEnv(..), networkIDMeta)
+import UI.Utils (css)
 import Unsafe.Coerce (unsafeCoerce)
 import Web.DOM.ParentNode (QuerySelector(..)) as WD
 import Web.Event.Event as WE
