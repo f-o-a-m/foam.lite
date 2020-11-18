@@ -53,7 +53,7 @@ data Query a
 
 data Action
   = Initialize
-  | NewNFTEvent {change :: Change, event :: NFTEvent, message :: DAppMessage}
+  | NewNFTEvent {change :: Change, event :: NFTEvent, message :: Maybe DAppMessage}
   | NFTBackfillStatusUpdate Table.BackfillStatus
   | HandleMapMessages MapMessages
   | SendToastMsg Toast.ToastMsg
@@ -191,10 +191,10 @@ component =
 
         void $ H.query Table._nftTable unit $ H.tell (tableEv tableEntry)
         case message of
-          ArbitraryString _ -> do
+          Just (ArbitraryString _) -> do
             -- Console.log "Got Arbitrary String"
             pure unit
-          Location {lat,lon} -> do
+          Just (Location {lat,lon}) -> do
             let point =
                   { coordinates: {lat, lng:lon}
                   , pointId: unHex c.transactionHash
@@ -202,15 +202,14 @@ component =
 
             -- Console.log "Got Location, querying child ..."
             void $ H.query Map._map unit $ H.tell (Map.NewPoint point)
-            pure unit
-          LocationWithArbitrary {lat,lon} -> do
+          Just (LocationWithArbitrary {lat,lon}) -> do
             let point =
                   { coordinates: {lat, lng:lon}
                   , pointId: unHex c.transactionHash
                   }
             -- Console.log "Got Location with arbitrary, querying child ..."
-            _ <- H.query Map._map unit $ H.tell (Map.NewPoint point)
-            pure unit
+            void $ H.query Map._map unit $ H.tell (Map.NewPoint point)
+          Nothing -> pure unit
       WindowResized -> do
         dims <- liftAff getMapDimensions
         void $ H.query Map._map unit $ H.request (Map.WindowResized dims)
@@ -252,17 +251,26 @@ mkWeb3Monitor { historical, emitter, relayableNFT, startBlock, endBlock, web3Pro
       handler constructor actionWrapper e = do
         -- Console.log "Received event"
         -- Console.log $ unsafeCoerce e
-        c@(Change{blockNumber}) <- ask
         let tokenID = (un constructor e).tokenID 
             txOpts = defaultTransactionOptions # _to ?~ relayableNFT
-        eRes <- lift $ RNFT.tokenData txOpts (BN blockNumber) {tokenId: tokenID}
-        liftEffect case eRes of
+        c@(Change{blockNumber}) <- ask
+
+        -- We'll only need to get at BlockNumber when we start caring about contents
+        -- as the only way the tokenData would change is when the token gets burned
+        -- eRes <- lift $ RNFT.tokenData txOpts (BN blockNumber) {tokenId: tokenID}
+
+        -- disabling this outright for now since we dont actually care about token inner data at the moment
+        -- and this would lower infura request rate as well as speed the hell out out of everything
+        {-
+        eRes <- lift $ RNFT.tokenData txOpts Latest {tokenId: tokenID}
+        message <- liftEffect $ case eRes of
           Left err -> do
             Console.log $ unsafeCoerce err
             ES.emit emitter $ SendToastMsg 
               { _type: Toast.Error
               , message: "Couldn't read tokenData for token " <> show tokenID
               }
+            pure Nothing
           Right res -> case parseDAppMessage (BS.fromUTF8 res) of
             Left err -> do
               Console.log "Error Decoding DAppMessage"
@@ -271,12 +279,16 @@ mkWeb3Monitor { historical, emitter, relayableNFT, startBlock, endBlock, web3Pro
                 { _type: Toast.Error
                 , message: "Couldn't parse token message for token " <> show tokenID
                 }
+              pure Nothing
             Right message ->  do
               -- Console.log "Emmitting NewNFTEvent"
-              ES.emit emitter $ NewNFTEvent 
-                { change: c
-                , event: actionWrapper e, message
-                }
+              pure $ Just message
+        -}
+        let message = Nothing
+        liftEffect $ ES.emit emitter $ NewNFTEvent 
+          { change: c
+          , event: actionWrapper e, message
+          }
         pure ContinueEvent
       handlers = 
         { mint: handler RNFT.MintedByRelay (\ev -> NFTMint { historical, ev } )
