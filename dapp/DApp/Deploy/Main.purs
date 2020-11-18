@@ -21,6 +21,10 @@ main = launchAff_ do
   let runWithProvider p = void $ deployWithProvider p 60 deployScript
   nodeUrl <- fromMaybe "http://localhost:8545" <$> liftEffect (lookupEnv "NODE_URL")
   ledgerNetwork <- liftEffect $ lookupEnv "LEDGER_NETWORK_ID"
+  ledgerAccountOffset <- liftEffect (lookupEnv "LEDGER_ACCOUNT_OFFSET") >>= case _ of
+    Nothing -> pure 0
+    Just ledgerAccOffsetStr ->  maybe (throwError $ error "couldn't parse LEDGER_ACCOUNT_OFFSET") pure (Int.fromString ledgerAccOffsetStr) 
+
   case ledgerNetwork of
     Nothing -> (liftEffect $ httpProvider nodeUrl) >>= runWithProvider
     Just ledgerNetworkString -> do
@@ -36,7 +40,7 @@ main = launchAff_ do
                           , path: ledgerPath 
                           , askConfirm: true
                           , accountsLength: 1
-                          , accountsOffset: 0
+                          , accountsOffset: ledgerAccountOffset
                           }
       provider <- liftEffect $ ledgerHttpProvider nodeUrl ledgerOptions
       runWithProvider provider
