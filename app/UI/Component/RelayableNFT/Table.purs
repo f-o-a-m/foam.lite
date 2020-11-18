@@ -76,8 +76,8 @@ component =
           HH.thead
           []
           [ HH.tr
-            [ css "hidden sm:table-row line-height-event-log border-b border-white last:border-b-0" ]
-            ((\th -> HH.th [css "font-medium line-height-event-log"] [ HH.text th ]) <$> tableHeadings)
+            [ css "hidden sm:table-row line-height-event-log border-b border-white" ]
+            ((\th -> HH.th [css $ "font-medium line-height-event-log " <> if th /= "Token" then "text-left" else "text-center"] [ HH.text th ]) <$> tableHeadings)
           ]
 
         responsiveHashString' loose str =
@@ -146,8 +146,9 @@ component =
 
         tableEntry entry =
           let view = tableEntryView entry
-              td = HH.td [ css "line-height-eventlog text-text_lightgray" ]
-              descriptionCell = td $ case view of
+              td = td' ""
+              td' cls = HH.td [ css $ "line-height-eventlog text-text_lightgray" <> (if cls == "" then "" else " " <> cls) ]
+              descriptionCell = td' "text-left" $ case view of
                 { owner: Just o, destination: Just d } -> [ HH.text $ view._type <> " #" <> show view.tokenID <> " from ", addressLink o, HH.text " to ", addressLink d ]
                 { minter: Just m } -> [ HH.span_ [HH.text $ view._type <> " #" <> show view.tokenID <> " for "], addressLink m ]
                 _ -> [ HH.text "???" ]
@@ -156,9 +157,9 @@ component =
                []
                [ HH.tr
                  [ css "hidden sm:table-row line-height-event-log border-b border-dullergray border-opacity-75 last:border-b-0" ]
-                 [ td [ txHashLink view.txHash ]
+                 [ td' "text-left" [ txHashLink view.txHash ]
                  , descriptionCell
-                 , td [ addressLink view.relayer ]
+                 , td' "text-left" [ addressLink view.relayer ]
                  , td [ tokenImage 16 view.tokenID "" ]
                  ]
                , HH.tr
