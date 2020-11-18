@@ -12,7 +12,7 @@ import Effect.Aff.Class (class MonadAff)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
-import Network.Ethereum.Core.BigNumber (embed)
+import Network.Ethereum.Core.BigNumber (BigNumber, embed)
 import UI.Component.Logging.Icons as Icons
 import UI.Component.RelayableNFT.Types (TableEntry, tableEntryView)
 import UI.Config (BlockExplorer, blockExplorerAddressLink, blockExplorerTxLink)
@@ -26,7 +26,7 @@ _nftTable = SProxy
 
 data BackfillStatus = 
     BackfillNeverStarted
-  | BackfillRunning
+  | BackfillRunning BigNumber
   | BackfillFinished
   | BackfillErrored String
 
@@ -34,11 +34,15 @@ type State = { entries :: Array TableEntry
              , historicalEntries :: Array TableEntry
              , blockExplorer :: Maybe BlockExplorer
              , backfillStatus :: BackfillStatus
+             , backfillExtents :: Maybe BackfillExtents
              }
+
+type BackfillExtents = { start :: BigNumber, end :: BigNumber }
 
 data Query a
   = InsertNewTableEntry TableEntry a
   | InsertHistoricalTableEntry TableEntry a
+  | BackfillExtentsDetermined BackfillExtents a
   | BackfillStatusUpdated BackfillStatus a
   | BlockExplorerUpdated (Maybe BlockExplorer) a
 
@@ -55,14 +59,19 @@ component
   => H.Component HH.HTML Query Input Message m
 component =
   H.mkComponent
-    { initialState: const $ { entries: [] {- generateTableEntry <$> (1..50) -}, historicalEntries: [], backfillStatus: BackfillNeverStarted, blockExplorer: Nothing }
+    { initialState: const $ { entries: [] {- generateTableEntry <$> (1..50) -}
+                            , historicalEntries: []
+                            , backfillStatus: BackfillNeverStarted
+                            , backfillExtents: Nothing
+                            , blockExplorer: Nothing
+                            }
     , render
     , eval
     }
   where
 
     render :: forall s. State -> H.ComponentHTML Action s m
-    render { entries, historicalEntries, backfillStatus, blockExplorer } = 
+    render { entries, historicalEntries, backfillStatus, backfillExtents, blockExplorer } = 
       HH.div
         [ css "flex w-full px-8 md:p-8 lg:pt-20 text-center" ]
         [
@@ -119,15 +128,24 @@ component =
 
         renderNewTableEntries = tableEntry <$> entries
         renderHistoricalTableEntries = tableEntry <$> historicalEntries
+        ellipsisOrBackfillPercentage bn = case backfillExtents of
+          {-
+          Just { start, end } ->
+            let totalBlocks = end - start
+                percent = (bn - start) / totalBlocks
+                percentStr = show percent
+             in "... (" <> if percentStr == "100" then "99" else percentStr  <> "%)" -- never show 100 cause otherwise we'd be at BackfillFinished :P
+          -}
+          _ -> "..."
         historicalEntriesInfo =
           let bfState@{noNew, noOld, bfs} = { noNew: null entries, noOld: null historicalEntries, bfs: backfillStatus }
               backfillCaveat =
                 case bfState of
                   { bfs: BackfillFinished, noNew: true, noOld: true } -> Just "No FOAM Lite events yet – go relay some messages!"
-                  { bfs: BackfillRunning, noNew: true, noOld: true } -> Just "No FOAM Lite events seen – searching chain history..."
+                  { bfs: BackfillRunning bn, noNew: true, noOld: true } -> Just $ "No FOAM Lite events seen – searching chain history" <> ellipsisOrBackfillPercentage bn
                   { bfs: BackfillNeverStarted, noNew: true, noOld: true } -> Just "No FOAM Lite events seen yet -- waiting to connect to Ethereum..."
                   { bfs: BackfillErrored e , noNew: true, noOld: true } -> Just $ "No FOAM Lite events seen yet -- searching chain history failed: " <> e
-                  { bfs: BackfillRunning, noNew: _, noOld: _ } -> Just "Searching chain history for more FOAM Lite events..."
+                  { bfs: BackfillRunning bn, noNew: _, noOld: _ } -> Just $ "Searching chain history for more FOAM Lite events" <> ellipsisOrBackfillPercentage bn
                   { bfs: BackfillErrored _, noNew: _, noOld: true } -> Just $ "Failed to fetch any historical FOAM Lite events"
                   { bfs: BackfillErrored _, noNew: _, noOld: false } -> Just $ "Coudn't fetch all historical FOAM Lite events"
                   { bfs: _, noNew: _, noOld: _ } -> Nothing
@@ -216,6 +234,9 @@ component =
             pure $ Just next
           InsertHistoricalTableEntry entry next -> do
             H.modify_ (\st -> st { historicalEntries = (entry : st.historicalEntries)})
+            pure $ Just next
+          BackfillExtentsDetermined extents next -> do
+            H.modify_ (\st -> st { backfillExtents = Just extents })
             pure $ Just next
           BackfillStatusUpdated bfs next -> do
             H.modify_ (\st -> st { backfillStatus = bfs })
