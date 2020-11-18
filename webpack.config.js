@@ -20,13 +20,16 @@ if (isDev) {
 }
 
 let plugins = [];
+const defines = {
+  'process.env.URL': JSON.stringify(process.env.URL),
+  'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
+  'process.env.FALLBACK_HTTP_PROVIDER': JSON.stringify(process.env.FALLBACK_HTTP_PROVIDER)
+};
+
+console.log("exporting the following defines: ", JSON.stringify(defines));
 
 plugins.push(
-  new webpack.DefinePlugin({
-    'process.env.URL': JSON.stringify(process.env.URL),
-    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
-    'process.env.FALLBACK_HTTP_PROVIDER': JSON.stringify(process.env.FALLBACK_HTTP_PROVIDER)
-  })
+  new webpack.DefinePlugin(defines)
 );
 plugins.push(new webpack.LoaderOptionsPlugin({
   debug: true
