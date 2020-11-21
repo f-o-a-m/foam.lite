@@ -21,6 +21,7 @@ dist/*
 !dist/static-token-images/
 !dist/static-token-images/*
 !dist/static-token-images/**/*
+.deployed-contracts/
 deployment/keys.txt
 foam5g.tgz
 package-lock.json
