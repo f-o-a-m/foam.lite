@@ -1,0 +1,249 @@
+/* ============= */
+
+@use "sass:color";
+@use "sass:map";
+@use "sass:meta";
+@use "./config.json" as json-config;
+
+@function is-color($value) {
+  @return type-of($value) == "color";
+}
+
+@function is-map($value) {
+  @return type-of($value) == "map";
+}
+
+@function optional($default, $value) {
+  @return if($value == null, $default, $value);
+}
+
+@function strip-unit($number) {
+  @if type-of($number) == "number" and not unitless($number) {
+    @return $number / ($number * 0 + 1);
+  }
+
+  @return $number;
+}
+
+$default-palette: (
+  "pink": #f9ad9e,
+  "blue": #2f80ed,
+  "green": #27ae60,
+  "white": #bcbfc9,
+  "light-copper": #d09d95,
+  // "mid-copper": #AE7A75,
+    "dark-copper": #956e6a,
+  "gold": #ffc966
+);
+
+$default-cube-components: (
+  "lt": "left-top",
+  "lb": "left-bottom",
+  "ct": "center-top",
+  "cc": "center-center",
+  "cb": "center-bottom",
+  "rt": "right-top",
+  "rb": "right-bottom"
+);
+
+$default-rotation-origins: (
+  top-left: 0% 0%,
+  bottom-left: 0% 100%,
+  center: 50% 50%,
+  top-right: 100% 0%,
+  bottom-right: 100% 100%
+);
+
+$palette: optional($default-palette, json-config.$palette);
+$cube-components: optional($default-cube-components, json-config.$cubeComponents);
+$rotation-origins: optional($default-rotation-origins, json-config.$rotationOrigins);
+$gradient-stops-supported: optional(3, map-get(json-config.$stops, "gradient"));
+
+// these are accessed via the following class:
+// .token-icon-token-rotation-#{strip-unit($stop)}
+// if you want to have more fun with it, you can use
+// simply apply style="--token-icon-border-rotation: XXdeg;"
+//           or style="--token-icon-cubes-rotation: XXdeg;"
+// to your container div for manual override (i.e., fun animations)
+$border-rotation-stop-increment: optional(15deg, map-get(json-config.$stops, "borderRotation"));
+$token-rotation-stop-increment: optional(15deg, map-get(json-config.$stops, "tokenRotation"));
+
+$min-rotation-stop: optional(-180deg, map-get(json-config.$stops, "minRotation"));
+$max-rotation-stop: optional(180deg, map-get(json-config.$stops, "maxRotation"));
+
+
+$cube-faces: (
+  "light-right": (
+    "top": #{var(--token-icon-base-color-darker)},
+    "side": #{var(--token-icon-base-color-lighter)},
+    "front": #{var(--token-icon-base-color)}
+  ),
+  "light-left": (
+    "top": #{var(--token-icon-base-color-darker)},
+    "side": #{var(--token-icon-base-color)},
+    "front": #{var(--token-icon-base-color-lighter)}
+  )
+);
+
+@mixin gen-palette($val) {
+  $base-color: null;
+  $base-color-darker: null;
+  $base-color-lighter: null;
+
+  @if is-color($val) {
+    --token-icon-base-color: #{$val};
+    --token-icon-base-color-darker: #{darken($val, 10%)};
+    --token-icon-base-color-lighter: #{lighten($val, +10%)};
+  } @else if is-map($val) {
+    $base: map-get($val, "base");
+    @if $base == null {
+      @error "map passed to @gen-palette must at least have a \"base\" key";
+    } @else {
+      --token-icon-base-color: #{$base};
+      $darken-amount: optional(10%, map-get($val, "darken-amount"));
+      --token-icon-base-color-darker: #{optional(
+          darken($base, $lighten-amount),
+          map-get($val, "darker")
+        )};
+      $lighten-amount: optional(10%, map-get($val, "lighten-amount"));
+      --token-icon-base-color-lighter: #{optional(
+          lighten($base, $lighten-amount),
+          map-get($val, "lighter")
+        )};
+    }
+  } @else {
+    @error "@gen-palette expects a value of type \"color\" or \"map\"";
+  }
+}
+
+@each $component-class, $component-svg in $cube-components {
+  @each $color-name, $color in $palette {
+    .token-icon.#{$component-class}-#{"" + $color-name}
+      .token-icon-cube-#{$component-svg} {
+      @include gen-palette($color);
+    }
+  }
+
+  @each $rot-origin, $rot-origin-value in $rotation-origins {
+    .token-icon.#{$component-class}-rot-origin-#{$rot-origin} {
+      --token-icon-cube-rotation-origin-#{$component-svg}: #{$rot-origin-value};
+      
+      .token-icon-cube-#{$component-svg} {
+        --token-icon-cube-base-rotation-origin: var(--token-icon-cube-rotation-origin-#{$component-svg});
+      }
+    }
+  }
+
+  @for $stop from $min-rotation-stop through $max-rotation-stop {
+    @if $stop % $token-rotation-stop-increment == 0deg {
+      .token-icon.#{$component-class}-rot-#{strip-unit($stop)} {
+        --token-icon-cube-rotation-#{$component-svg}: #{$stop !important};
+      }
+    }
+  }
+  
+  .token-icon-cube-rot-ref-cube .token-icon-cube-#{$component-svg} {
+    --token-icon-cube-base-rotation: var(--token-icon-cube-rotation-#{$component-svg});
+  }
+
+  .token-icon-cube-rot-ref-icon-center .token-icon-cube-#{$component-svg} {
+    --token-icon-cube-base-rotation: initial;
+    --token-icon-cube-base-rotation-reference: initial;
+  
+    transform-box: view-box;
+    transform-origin: var(--token-icon-cube-rotation-origin-#{$component-svg});
+    transform: rotate(var(--token-icon-cube-rotation-#{$component-svg})) !important;
+  }
+}
+
+.token-icon.token-icon-cube-rot-ref-cube {
+  --token-icon-cube-rotation-box: fill-box;
+}
+.token-icon.token-icon-cube-rot-ref-icon-center {
+  --token-icon-cube-rotation-box: view-box;
+  --token-icon-cube-base-rotation-box: view-box;
+}
+
+@each $light-source, $lighting in $cube-faces {
+  @each $face, $fill in $lighting {
+    .token-icon-face-#{$face} {
+      fill: var(--token-icon-face-fill-#{$face});
+    }
+
+    .token-icon-cube-#{$light-source} {
+      --token-icon-face-fill-#{$face}: #{$fill};
+    }
+  }
+}
+
+// dont show any border by default
+.token-icon-circle-border-impl {
+  visibility: hidden;
+}
+.token-icon-border-segmented-3-impl {
+  visibility: hidden;
+}
+
+@for $stop from 1 through $gradient-stops-supported {
+  // seed stop color as set from --token-icon-gradient-stop-X
+  .token-icon-gradient-stop-#{$stop} {
+    stop-color: var(--token-icon-gradient-stop-#{$stop});
+  }
+
+  // enable our simple circle for 1 and 2 color borders
+  @if $stop > 0 and $stop < 3 {
+    .token-icon.token-icon-border-#{$stop} .token-icon-circle-border-impl {
+      @if $stop == 1 {
+        stroke: var(--token-icon-gradient-stop-1);
+      } @else {
+        stroke: url(#token-border-gradient-simple-2-stop);
+      }
+      visibility: visible;
+    }
+  }
+
+  // enable our three-stop segmented border when needed
+  @if $stop == 3 {
+    .token-icon.token-icon-border-#{$stop} .token-icon-border-segmented-3-impl {
+      visibility: if($stop == 3, visible, hidden);
+    }
+  }
+
+  // change the gradient-stop value based on root class
+  @each $color-name, $color in $palette {
+    .token-icon.token-icon-border-#{$stop}-#{"" + $color-name} { // "" + $color-name is to silence a useless warning
+      --token-icon-gradient-stop-#{$stop}: #{$color};
+    }
+  }
+}
+
+.token-icon-cubes-group {
+  transform: rotate(var(--token-icon-cubes-rotation));
+  transform-origin: 50% 50%;
+}
+
+@for $stop from $min-rotation-stop through $max-rotation-stop {
+  @if $stop % $token-rotation-stop-increment == 0deg {
+    .token-icon.token-icon-token-rotation-#{strip-unit($stop)} {
+      --token-icon-cubes-rotation: #{$stop !important};
+    }
+  }
+}
+
+.token-icon-borders-group {
+  transform: rotate(var(--token-icon-border-rotation));
+  transform-origin: 50% 50%;
+}
+@for $stop from $min-rotation-stop through $max-rotation-stop {
+  @if $stop % $border-rotation-stop-increment == 0deg {
+    .token-icon.token-icon-border-rotation-#{strip-unit($stop)} {
+      --token-icon-border-rotation: #{$stop !important};
+    }
+  }
+}
+
+.token-icon-cube-base {
+  transform-box: var(--token-icon-cube-rotation-box);
+  transform: rotate(var(--token-icon-cube-base-rotation));
+  transform-origin: var(--token-icon-cube-base-rotation-origin);
+}

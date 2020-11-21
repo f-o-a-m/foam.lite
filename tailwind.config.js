@@ -55,6 +55,9 @@ module.exports = {
       },
       transitionProperty: {
         'all-positions': 'margin, padding, top, bottom, left, right'
+      },
+      "padding": {
+        "4.5": "1.125rem"
       }
     },
   },

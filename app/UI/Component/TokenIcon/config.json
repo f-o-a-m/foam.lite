@@ -1,0 +1,47 @@
+{
+  "palette": {
+    "pink": "#f9ad9e",
+    "blue": "#2f80ed",
+    "green": "#27ae60",
+    "white": "#bcbfc9",
+    "light-copper": "#d09d95",
+    "dark-copper": "#956e6a",
+    "gold": "#ffc966"
+  },
+  "defaultStyle": {
+    "lt": "dark-copper",
+    "lb": "dark-copper",
+    "ct": "dark-copper",
+    "cc": "dark-copper",
+    "cb": "dark-copper",
+    "rt": "dark-copper",
+    "rb": "dark-copper",
+    "token-icon-border": 3,
+    "token-icon-border-1": "pink",
+    "token-icon-border-2": "green",
+    "token-icon-border-3": "blue"
+  },
+  "stops": {
+    "gradient": 3,
+    "tokenRotation": "15deg",
+    "borderRotation": "15deg",
+    "minRotation": "-180deg",
+    "maxRotation": "180deg"
+  },
+  "cubeComponents": {
+    "lt": "left-top",
+    "lb": "left-bottom",
+    "ct": "center-top",
+    "cc": "center-center",
+    "cb": "center-bottom",
+    "rt": "right-top",
+    "rb": "right-bottom"
+  },
+  "rotationOrigins": {
+    "top-left": "0% 0%",
+    "bottom-left": "0% 100%",
+    "center": "50% 50%",
+    "top-right": "100% 0%",
+    "bottom-right": "100% 100%"
+  }
+}

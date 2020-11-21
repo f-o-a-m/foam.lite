@@ -6,15 +6,18 @@ import Control.Alt ((<|>))
 import Control.Monad.Reader (class MonadAsk)
 import Data.Array (length, null, (:))
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Symbol (SProxy(..))
+import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
 import Data.Tuple (Tuple(..))
 import Effect.Aff.Class (class MonadAff)
 import Halogen as H
 import Halogen.HTML as HH
+import Halogen.HTML.Core as HHC
 import Halogen.HTML.Properties as HP
 import Network.Ethereum.Core.BigNumber (BigNumber, embed)
-import UI.Component.Logging.Icons as Icons
-import UI.Component.RelayableNFT.Types (TableEntry, tableEntryView)
+import Prim.Row as Row
+import UI.Component.Icons as Icons
+import UI.Component.RelayableNFT.Types (TableEntry, TableEntryView, tableEntryView)
+import UI.Component.TokenIcon.Component as TokenIcon
 import UI.Config (BlockExplorer, blockExplorerAddressLink, blockExplorerTxLink)
 import UI.Monad (AppEnv)
 import UI.Utils (css)
@@ -52,6 +55,8 @@ type Input = Unit
 
 type Message = Void
 
+type Slots = ()
+
 component
   :: ∀ m.
      MonadAff m
@@ -70,7 +75,7 @@ component =
     }
   where
 
-    render :: forall s. State -> H.ComponentHTML Action s m
+    render :: State -> H.ComponentHTML Action Slots m
     render { entries, historicalEntries, backfillStatus, backfillExtents, blockExplorer } = 
       HH.div
         [ css "flex w-full px-8 md:p-8 lg:pt-20 text-center" ]
@@ -113,15 +118,23 @@ component =
               [ responsiveHashString' loose text, Icons.externalLink 4 ["inline-block", "-mb-1"] [] ]
         responsiveLink = responsiveLink' false
 
-        tokenIDToName tid = "Token #" <> show tid
         fullWidthCell = HP.colSpan (length tableHeadings)
-        tokenImage size tokenID extras =
+
+        tokenImage size view extras =
           HH.img
-          [ HP.alt $ tokenIDToName tokenID
-          , HP.title $ tokenIDToName tokenID
-          , HP.src ("/static-token-images/" <> show (tokenID `mod` (embed 3) + (embed 1)) <> ".png")
-          , css ("w-" <> show size <> " h-" <> show size <> " inline-block" <> " " <> extras)
-          ]
+            [ HP.alt tokenIDAsName
+            , HP.title tokenIDAsName
+            , HP.src ("/static-token-images/" <> show (view.tokenID `mod` (embed 3) + (embed 1)) <> ".png")
+            , css ("w-" <> show size <> " h-" <> show size <> " inline-block" <> " " <> extras)
+            ]
+          where tokenIDAsName = "Token #" <> show view.tokenID
+          -- let classes = ("w-"<>sz<>" h-"<>sz<>" inline-block" <> if extras /= "" then " " <> extras else "")
+          --     sz = show size
+          --     containerProps = [ css classes ]
+          --     iconProps = {}
+          --  in TokenIcon.componentHTML containerProps iconProps
+
+
         justOrNA = fromMaybe (HH.text "N/A")
 
         renderTableEntries = renderNewTableEntries <> historicalEntriesInfo <> renderHistoricalTableEntries
@@ -178,7 +191,7 @@ component =
                  [ td' "text-left" [ txHashLink view.txHash ]
                  , descriptionCell
                  , td' "text-left" [ addressLink view.relayer ]
-                 , td [ tokenImage 16 view.tokenID "" ]
+                 , td [ tokenImage 16 view {- "pt-4.5" -} "" ]
                  ]
                , HH.tr
                  [ css "sm:hidden border-dullergray border-opacity-75 last:border-b-0" ]
@@ -204,7 +217,7 @@ component =
             [ css "flex flex-no-wrap flex-root border rounded p-4 mt-10 h-56" ]
             [ HH.div
               [ css "w-1/3 h-full flex justify-center justify-items-center place-items-center border-r" ]
-              [ HH.div [ ] [tokenImage 24 view.tokenID "mr-3" ] ]
+              [ tokenImage 24 view "mr-3" ]
             , HH.div
               [ css "w-2/3 h-full flex justify-center justify-items-center place-items-center text-left px-4" ]
               [ HH.div [ ]
@@ -221,13 +234,13 @@ component =
 
     eval :: forall i . 
             H.HalogenQ Query Action i
-         ~> H.HalogenM State Action () Message m
+         ~> H.HalogenM State Action Slots Message m
     eval = H.mkEval $ H.defaultEval
       { handleQuery = handleQuery
       , initialize = Nothing
       }
       where
-        handleQuery :: forall a.  Query a -> H.HalogenM State Action () Message m (Maybe a)
+        handleQuery :: forall a.  Query a -> H.HalogenM State Action Slots Message m (Maybe a)
         handleQuery = case _ of
           InsertNewTableEntry entry next -> do
             H.modify_ (\st -> st { entries = (entry : st.entries)})

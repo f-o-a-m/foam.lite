@@ -6,6 +6,7 @@ const BrotliPlugin = require('brotli-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const TerserPlugin = require("terser-webpack-plugin");
 const OptimizeCSSAssetsPlugin = require('optimize-css-assets-webpack-plugin')
+const NodeSassJsonImporter = require('node-sass-json-importer');
 const webpack = require('webpack');
 const isWebpackDevServer = process.argv.some(a => path.basename(a) === 'webpack-dev-server');
 const isWatch = process.argv.some(a => a === '--watch');
@@ -93,8 +94,23 @@ module.exports = {
         ]
       },
       {
-        test: /\.(sa|sc|c)ss$/,
+        test: /\.css$/,
         use: [ (isDev ? 'style-loader' : MiniCssExtractPlugin.loader), 'css-loader', 'postcss-loader' ],
+      },
+      {
+        test: /\.s[ac]ss$/,
+        use: [
+            (isDev ? 'style-loader' : MiniCssExtractPlugin.loader),
+            'css-loader',
+            {
+              loader: 'sass-loader',
+              options: {
+                sassOptions: {
+                  importer: NodeSassJsonImporter()
+                }
+              }
+            }
+          ],
       },
       {
           test: /\.(glsl|vs|fs)$/,
@@ -133,7 +149,7 @@ module.exports = {
         },
         styles: {
           name: 'styles',
-          test: /\.css$/,
+          test: /\.(sa|sc|c)ss$/,
           chunks: 'all',
           enforce: true,
         }
