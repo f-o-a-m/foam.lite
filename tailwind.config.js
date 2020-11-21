@@ -1,3 +1,5 @@
+const defaultColors = require('tailwindcss/defaultTheme').colors;
+console.log("default colors", defaultColors);
 module.exports = {
   important: true,
   future: {
@@ -9,18 +11,23 @@ module.exports = {
     fontFamily: {
       sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', "Noto Sans", 'sans-serif', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'],
     },
+    // curating colors instead of `extend`ing them substantially reduces final CSS size
+    colors: {
+      navbar_dark: "#141515",
+      text_lightgray: "#D8DCDE",
+      dullergray: "#ACAFB0",
+      bg_gradient_light: "#2B2B2B",
+      bg_gradient_dark: "#000000",
+      transparent: defaultColors.transparent,
+      current: defaultColors.current,
+      white: defaultColors.white,
+      black: defaultColors.black,
+    },
     extend: {
       screens: {
         'xxl': '2047px',
         '3xl': '2559px',
         '4xl': '3199px',
-      },
-      colors: {
-        navbar_dark: "#141515",
-        text_lightgray: "#D8DCDE",
-        dullergray: "#ACAFB0",
-        bg_gradient_light: "#2B2B2B",
-        bg_gradient_dark: "#000000",
       },
       maxWidth: {
         '1/5': '20%',
