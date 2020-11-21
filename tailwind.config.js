@@ -1,5 +1,5 @@
 const defaultColors = require('tailwindcss/defaultTheme').colors;
-console.log("default colors", defaultColors);
+
 module.exports = {
   important: true,
   future: {
