@@ -4,7 +4,7 @@ import detectEthereumProvider from '@metamask/detect-provider';
 async function run() {
   console.log('loading stylesheets');
   require("./styles/main.css");
-  require("./UI/Component/TokenIcon/token-icon.scss");
+  // require("./UI/Component/TokenIcon/token-icon.scss");
   console.log('loaded stylesheets');
 
   const provider = await detectEthereumProvider();

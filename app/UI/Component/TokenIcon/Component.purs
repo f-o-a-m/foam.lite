@@ -6,12 +6,7 @@ module UI.Component.TokenIcon.Component
 import Prelude
 
 import DOM.HTML.Indexed (HTMLdiv)
-import Data.Array ((:))
-import Data.Maybe (Maybe(..))
-import Data.Symbol (SProxy(..))
 import Effect (Effect)
-import Effect.Class (class MonadEffect)
-import Halogen (liftEffect)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP

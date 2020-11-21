@@ -5,13 +5,9 @@ module UI.Component.Icons where
 import Prelude
 
 import DOM.HTML.Indexed (HTMLspan)
-import Data.Tuple (Tuple(..))
-import Foreign.Object as FO
-import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
 import Halogen.HTML.Properties.ARIA as HPA
-import Type.Row.Homogeneous (class Homogeneous)
 import UI.Utils ((<&>))
 import UI.SVG as SVG
 

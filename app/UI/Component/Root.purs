@@ -3,10 +3,9 @@ module UI.Component.Root where
 import Prelude
 
 import Contracts.RelayableNFT as RNFT
-import Control.Monad.Reader (class MonadAsk, ReaderT, ask, lift)
-import DApp.Message (DAppMessage(..), parseDAppMessage)
+import Control.Monad.Reader (class MonadAsk, ReaderT, ask)
+import DApp.Message (DAppMessage(..))
 import Data.Array (catMaybes, filter, null)
-import Data.ByteString as BS
 import Data.Either (Either(..))
 import Data.Lens ((?~), (.~))
 import Data.Maybe (Maybe(..))
@@ -40,7 +39,6 @@ import UI.Component.RelayableNFT.Table as Table
 import UI.Component.RelayableNFT.Types (TableEntry(..))
 import UI.Config (AppEnv(..), networkIDMeta)
 import UI.Utils (css)
-import Unsafe.Coerce (unsafeCoerce)
 import Web.DOM.ParentNode (QuerySelector(..)) as WD
 import Web.Event.Event as WE
 import Web.HTML as WH

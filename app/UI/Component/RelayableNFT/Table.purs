@@ -6,18 +6,15 @@ import Control.Alt ((<|>))
 import Control.Monad.Reader (class MonadAsk)
 import Data.Array (length, null, (:))
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
+import Data.Symbol (SProxy(..))
 import Data.Tuple (Tuple(..))
 import Effect.Aff.Class (class MonadAff)
 import Halogen as H
 import Halogen.HTML as HH
-import Halogen.HTML.Core as HHC
 import Halogen.HTML.Properties as HP
 import Network.Ethereum.Core.BigNumber (BigNumber, embed)
-import Prim.Row as Row
 import UI.Component.Icons as Icons
-import UI.Component.RelayableNFT.Types (TableEntry, TableEntryView, tableEntryView)
-import UI.Component.TokenIcon.Component as TokenIcon
+import UI.Component.RelayableNFT.Types (TableEntry, tableEntryView)
 import UI.Config (BlockExplorer, blockExplorerAddressLink, blockExplorerTxLink)
 import UI.Monad (AppEnv)
 import UI.Utils (css)
