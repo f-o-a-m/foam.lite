@@ -2,20 +2,14 @@ module MIME where
 
 import Prelude
 
-import Control.Alt ((<|>))
 import Control.Error.Util (note)
 import Data.ByteString as BS
-import Data.Either (Either(..))
-import Data.Maybe (maybe)
+import Data.Either (Either)
 import Data.MediaType.Common (applicationOctetStream, textPlain)
-import Data.Tuple (Tuple(..))
-import Network.Ethereum.Core.BigNumber as Eth
-import Network.Ethereum.Core.HexString as Eth
-import Network.Ethereum.Core.Signatures as Eth
-import Type.Proxy (Proxy(..))
-import Type.Trout (type (:<|>))
-import Type.Trout.ContentType (class AllMimeRender, class HasMediaType, class MimeParse, class MimeRender, getMediaType, mimeParse, mimeRender)
-import Type.Trout.ContentType.JSON (JSON)
+import Network.Ethereum.Core.BigNumber (BigNumber) as Eth
+import Network.Ethereum.Core.HexString (HexString, mkHexString, toByteString, toHexString) as Eth
+import Network.Ethereum.Core.Signatures (Address, mkAddress) as Eth
+import Type.Trout.ContentType (class HasMediaType, class MimeParse, class MimeRender)
 import Type.Trout.PathPiece (class FromPathPiece)
 
 data PlainText

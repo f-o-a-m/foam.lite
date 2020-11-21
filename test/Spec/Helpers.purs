@@ -11,7 +11,7 @@ import Effect.Aff (Aff, Error)
 import Effect.Aff.AVar as AVar
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Effect.Exception (error)
-import Network.Ethereum.Web3 (class EventFilter, class KnownSize, Address, BigNumber, Change(..), EventAction(..), Filter, HexString, Provider, UIntN, Web3, embed, event, forkWeb3, mkAddress, mkHexString, runWeb3, uIntNFromBigNumber, unUIntN)
+import Network.Ethereum.Web3 (class EventFilter, Address, BigNumber, Change(..), EventAction(..), Filter, HexString, Provider, UIntN, Web3, embed, event, forkWeb3, mkAddress, mkHexString, runWeb3, uIntNFromBigNumber, unUIntN)
 import Network.Ethereum.Web3.Solidity (class DecodeEvent)
 import Network.Ethereum.Web3.Solidity.Size (class KnownSize, DLProxy(..))
 import Partial.Unsafe (unsafePartialBecause)
