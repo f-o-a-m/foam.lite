@@ -8,25 +8,27 @@ import Data.Mock as Mock
 import Network.Ethereum.Core.BigNumber (BigNumber)
 import Network.Ethereum.Core.HexString (HexString)
 import Network.Ethereum.Web3 (Address, unUIntN)
-import UI.Utils (formatAddress, formatHexString)
 
 data TableEntry 
   = Minted HexString RNFT.MintedByRelay
   | Transferred HexString RNFT.TransferredByRelay
+
+type TableEntryView =
+  { _type :: String
+  , txHash :: HexString
+  , minter :: Maybe Address
+  , owner :: Maybe Address
+  , destination :: Maybe Address
+  , relayer :: Address
+  , tokenID :: BigNumber
+  }
 
 -- newtype MintedByRelay = MintedByRelay {minter :: Address,relayer :: Address,tokenID :: (UIntN (D2 :& D5 :& DOne D6))}
 -- newtype TransferredByRelay = TransferredByRelay {owner :: Address,destination :: Address,relayer :: Address,tokenID :: (UIntN (D2 :& D5 :& DOne D6))}
 
 tableEntryView
   :: TableEntry
-  -> { _type :: String
-     , txHash :: HexString
-     , minter :: Maybe Address
-     , owner :: Maybe Address
-     , destination :: Maybe Address
-     , relayer :: Address
-     , tokenID :: BigNumber
-     }
+  -> TableEntryView
 tableEntryView (Minted txHash (RNFT.MintedByRelay a)) =
   { _type: "Minted"
   , txHash

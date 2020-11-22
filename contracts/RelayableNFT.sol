@@ -2,13 +2,14 @@ pragma solidity ^0.6.0;
 
 // SPDX-License-Identifier: ISC
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721Burnable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/EnumerableMap.sol";
 import "./RelayingUtils.sol";
 
-contract RelayableNFT is ERC721Burnable {
+contract RelayableNFT is ERC721Burnable, Ownable {
     using Counters for Counters.Counter;
     using EnumerableMap for EnumerableMap.UintToAddressMap;
     using RelayingUtils for RelayingUtils.RelayedMessage;
@@ -206,5 +207,16 @@ contract RelayableNFT is ERC721Burnable {
         if (_tokenDatas[tokenId].length != 0) {
             delete _tokenDatas[tokenId];
         }
+    }
+
+    /**
+     * @dev sets the base URI for token images etc.
+     *
+     * Requirements:
+     *
+     * - must be called by the owner of the contract (by default, the deployer)
+     */
+    function setBaseURI(string memory newBaseURI) public onlyOwner {
+        _setBaseURI(newBaseURI);
     }
 }

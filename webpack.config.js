@@ -6,6 +6,7 @@ const BrotliPlugin = require('brotli-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const TerserPlugin = require("terser-webpack-plugin");
 const OptimizeCSSAssetsPlugin = require('optimize-css-assets-webpack-plugin')
+const NodeSassJsonImporter = require('node-sass-json-importer');
 const webpack = require('webpack');
 const isWebpackDevServer = process.argv.some(a => path.basename(a) === 'webpack-dev-server');
 const isWatch = process.argv.some(a => a === '--watch');
@@ -20,13 +21,16 @@ if (isDev) {
 }
 
 let plugins = [];
+const defines = {
+  'process.env.URL': JSON.stringify(process.env.URL),
+  'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
+  'process.env.FALLBACK_HTTP_PROVIDER': JSON.stringify(process.env.FALLBACK_HTTP_PROVIDER)
+};
+
+console.log("exporting the following defines: ", JSON.stringify(defines));
 
 plugins.push(
-  new webpack.DefinePlugin({
-    'process.env.URL': JSON.stringify(process.env.URL),
-    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
-    'process.env.FALLBACK_HTTP_PROVIDER': JSON.stringify(process.env.FALLBACK_HTTP_PROVIDER)
-  })
+  new webpack.DefinePlugin(defines)
 );
 plugins.push(new webpack.LoaderOptionsPlugin({
   debug: true
@@ -90,8 +94,23 @@ module.exports = {
         ]
       },
       {
-        test: /\.(sa|sc|c)ss$/,
+        test: /\.css$/,
         use: [ (isDev ? 'style-loader' : MiniCssExtractPlugin.loader), 'css-loader', 'postcss-loader' ],
+      },
+      {
+        test: /\.s[ac]ss$/,
+        use: [
+            (isDev ? 'style-loader' : MiniCssExtractPlugin.loader),
+            'css-loader',
+            {
+              loader: 'sass-loader',
+              options: {
+                sassOptions: {
+                  importer: NodeSassJsonImporter()
+                }
+              }
+            }
+          ],
       },
       {
           test: /\.(glsl|vs|fs)$/,
@@ -130,7 +149,7 @@ module.exports = {
         },
         styles: {
           name: 'styles',
-          test: /\.css$/,
+          test: /\.(sa|sc|c)ss$/,
           chunks: 'all',
           enforce: true,
         }

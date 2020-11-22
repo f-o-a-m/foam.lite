@@ -14,8 +14,8 @@ import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
 import Network.Ethereum.Web3 (runWeb3)
 import Network.Ethereum.Web3.Api (net_version)
-import Ocelot.HTML.Properties (css)
 import UI.Monad (AppEnv(..))
+import UI.Utils (css)
 
 _header :: SProxy "header"
 _header = SProxy

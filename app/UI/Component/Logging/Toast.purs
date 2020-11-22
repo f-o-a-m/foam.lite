@@ -3,7 +3,6 @@ module UI.Component.Logging.Toast where
 import Prelude
 
 import Control.Alt ((<|>))
-import DOM.HTML.Indexed (HTMLspan)
 import Data.Maybe (Maybe(..), isJust)
 import Data.Symbol (SProxy(..))
 import Data.Time.Duration (Milliseconds(..))
@@ -13,9 +12,8 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Halogen.HTML.Properties.ARIA as HPA
-import Ocelot.HTML.Properties ((<&>), css)
-import UI.Component.Logging.Icons as Icons
+import UI.Component.Icons as Icons
+import UI.Utils (css)
 
 _toast :: SProxy "toast"
 _toast = SProxy
@@ -120,7 +118,7 @@ component =
                       Info -> Icons.info 6 ["hidden", "sm:inline-block"] [css "text-blue text-2xl mr-2"]
                       Success -> Icons.success  6 ["hidden", "sm:inline-block"] [css "text-green text-2xl mr-2"]
                 in [ icon
-                   , HH.p_ [ HH.text s.message]
+                   , HH.span [css "inline-block sm:pl-4" ] [ HH.text s.message ]
                    ]
       in HH.div
            [ HP.classes (HH.ClassName <$> containerClasses)
