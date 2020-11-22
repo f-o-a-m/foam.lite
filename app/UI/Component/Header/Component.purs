@@ -14,6 +14,7 @@ import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
 import Network.Ethereum.Web3 (runWeb3)
 import Network.Ethereum.Web3.Api (net_version)
+import UI.Config (baseURL)
 import UI.Monad (AppEnv(..))
 import UI.Utils (css)
 
@@ -59,12 +60,12 @@ component =
             [ HH.img
               [ css "h-full hidden sm:inline-flex no-hover"
               , HP.alt "FOAM Logo"
-              , HP.src "/foam-logo.png"
+              , HP.src $ baseURL <> "/foam-logo.png"
               ]
             , HH.img
               [ css "h-full inline-flex sm:hidden no-hover"
               , HP.alt "FOAM Logo"
-              , HP.src "/foam-logo-small.png"
+              , HP.src $ baseURL <> "/foam-logo-small.png"
               ]
             ]
           , HH.div 

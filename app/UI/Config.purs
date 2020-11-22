@@ -2,7 +2,7 @@ module UI.Config where
 
 import Prelude
 
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (toLower)
 import Data.Traversable (elem, for)
 import Effect (Effect)
@@ -15,6 +15,8 @@ import Partial.Unsafe (unsafeCrashWith)
 type ForeignMaybe a = Maybe a -> (a -> Maybe a) -> Maybe a
 runForeignMaybe :: forall a. ForeignMaybe a -> Maybe a
 runForeignMaybe f = f Nothing Just
+
+foreign import baseURL :: String
 foreign import getFallbackHTTPProviderURL :: ForeignMaybe String
 foreign import getRelayedProvider :: ForeignMaybe Provider
 foreign import getRelayedContracts :: ForeignMaybe RelayedContracts

@@ -6,6 +6,8 @@ addons:
   apt:
     packages:
     - libudev-dev
+env:
+  - URL=https://f-o-a-m.github.io/foam.lite
 services:
   - docker
 install:
@@ -17,7 +19,7 @@ script:
   - sleep 10
   - make test-dapp
   - make cliquebait-stop
-  - cp .deployed-contracts/* build/
+  - cp -v .deployed-contracts/*.json build/
   - make bundle
 deploy:
   provider: pages

@@ -15,7 +15,7 @@ import Halogen.HTML.Properties as HP
 import Network.Ethereum.Core.BigNumber (BigNumber, embed)
 import UI.Component.Icons as Icons
 import UI.Component.RelayableNFT.Types (TableEntry, tableEntryView)
-import UI.Config (BlockExplorer, blockExplorerAddressLink, blockExplorerTxLink)
+import UI.Config (BlockExplorer, baseURL, blockExplorerAddressLink, blockExplorerTxLink)
 import UI.Monad (AppEnv)
 import UI.Utils (css)
 
@@ -121,7 +121,7 @@ component =
           HH.img
             [ HP.alt tokenIDAsName
             , HP.title tokenIDAsName
-            , HP.src ("/static-token-images/" <> show (view.tokenID `mod` (embed 3) + (embed 1)) <> ".png")
+            , HP.src (baseURL <> "/static-token-images/" <> show (view.tokenID `mod` (embed 3) + (embed 1)) <> ".png")
             , css ("w-" <> show size <> " h-" <> show size <> " inline-block" <> " " <> extras)
             ]
           where tokenIDAsName = "Token #" <> show view.tokenID

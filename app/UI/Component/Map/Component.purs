@@ -28,6 +28,7 @@ import Math (pow)
 import React as R
 import Record (disjointUnion)
 import UI.Component.Map.Layer.Ping as Ping
+import UI.Config (baseURL)
 import Unsafe.Coerce (unsafeCoerce)
 import WebMercator.LngLat (LngLat)
 import WebMercator.LngLat as LngLat
@@ -264,7 +265,7 @@ mapboxApiAccessToken :: String
 mapboxApiAccessToken = "pk.eyJ1IjoiYmxpbmt5MzcxMyIsImEiOiJjamVvcXZtbGYwMXgzMzNwN2JlNGhuMHduIn0.ue2IR6wHG8b9eUoSfPhTuQ"
 
 iconUrl :: String
-iconUrl = "beacon.png"
+iconUrl = baseURL <> "/beacon.png"
 
 type IconEntry = 
   { x :: Int

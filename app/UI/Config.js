@@ -1,5 +1,22 @@
 "use strict";
 
+let _baseURL;
+
+function _getBaseURL() {
+  if (!_baseURL) {
+    const baseURL = process.env.URL;
+    if (baseURL && typeof(baseURL) === 'string') {
+      _baseURL = baseURL.replace(/\/$/, "");
+    } else {
+      _baseURL = "";
+    }
+  }
+
+  return _baseURL;
+}
+
+exports.baseURL = _getBaseURL();
+
 exports.getFallbackHTTPProviderURL = function(nothing) {
   return function(just) {
     try {
