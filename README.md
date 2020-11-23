@@ -6,6 +6,10 @@
 
 Deployed [here](https://f-o-a-m.github.io/foam.lite/)
 
+## General Caveats
+Due to weirdness with certain versions of Node and Spago, you'd ideally want to use the `v10.x` train of Node.
+With nvm, this is `nvm install lts/dubnium && nvm use lts/dubnium`
+
 ## UI
 
 To build the UI, make sure you have already build and deployed the dapp (see ##Dapp section for details). When you're ready to build and serve the app, simply do
