@@ -1,7 +1,5 @@
 # foam.lite
 
-[![Build Status](https://travis-ci.com/f-o-a-m/foam.lite.svg?token=S5ycohXqQwQa9vbXx9fF&branch=main)](https://travis-ci.com/f-o-a-m/foam.lite)
-
 ![foam-lite](./.readme-image.png)
 
 Deployed [here](https://f-o-a-m.github.io/foam.lite/)
@@ -12,7 +10,7 @@ With nvm, this is `nvm install lts/dubnium && nvm use lts/dubnium`
 
 ## UI
 
-To build the UI, make sure you have already build and deployed the dapp (see ##Dapp section for details). When you're ready to build and serve the app, simply do
+To build the UI, make sure you have already build and deployed the dapp. When you're ready to build and serve the app, simply do
 
 ```bash
 > npm i
