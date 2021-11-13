@@ -37,7 +37,9 @@ handler respond pkt = case pkt of
 main :: Effect Unit
 main = do
   addr <- fromMaybe "0.0.0.0" <$> lookupEnv "PACKET_RECEIVER_ADDRESS"
-  port <- fromMaybe 7000 <$> fromString <$> fromMaybe "" <$> lookupEnv "PACKET_RECEIVER_PORT"
+  port <- fromMaybe 7000 <$> do
+    maybePort <- lookupEnv "PACKET_RECEIVER_PORT"
+    pure $ fromString =<< maybePort
 
   setLogLevel Debug
   log Info "🍝"
