@@ -8,6 +8,7 @@ import Chanterelle.Internal.Utils (withExceptT')
 import Contracts.RelayableNFT as RNFT
 import Control.Alt ((<|>))
 import DApp.Relay (SignedRelayedMessage, SignedRelayedTransfer, mintRelayed, mintRelayed', transferRelayed, transferRelayed')
+import DApp.Relay (estimateMintRelayed, estimateTransferRelayed) as RelayEstimate
 import DApp.Util (makeTxOpts)
 import Data.Array (head)
 import Data.Either (Either(..), either)
@@ -28,6 +29,8 @@ type AppEnv = {
   provider :: Provider,
   relayActions :: { doMintRelayed :: SignedRelayedMessage -> Web3 HexString
                   , doTransferRelayed :: SignedRelayedTransfer -> Web3 HexString
+                  , estimateMintRelayed :: SignedRelayedMessage -> Web3 BigNumber
+                  , estimateTransferRelayed :: SignedRelayedTransfer -> Web3 BigNumber
                   , getRelayNonce :: Address -> Web3 BigNumber
                   }
 }
@@ -79,13 +82,17 @@ mkEnv = liftAff do
     Right web3Env' -> pure web3Env'
   artifacts <- readArtifacts web3Env.chainIDInt
   let rnftTxOpts = makeTxOpts { from: web3Env.primaryAccount.addr, to: artifacts.rnft }
-  let getRelayNonce addr =
+      getRelayNonce addr =
         RNFT.getCurrentRelayNonce rnftTxOpts Latest { addr } >>= either (throwError <<< error <<< show) (pure <<< unUIntN)
+      estimateMintRelayed mint = RelayEstimate.estimateMintRelayed web3Env.primaryAccount.addr mint rnftTxOpts
+      estimateTransferRelayed xfer = RelayEstimate.estimateTransferRelayed web3Env.primaryAccount.addr xfer rnftTxOpts
   relayActions <-
     if not web3Env.primaryAccount.isFromPrivateKey
     then pure {
           doMintRelayed: \msg -> mintRelayed msg rnftTxOpts,
           doTransferRelayed: \xfer -> transferRelayed xfer rnftTxOpts,
+          estimateMintRelayed,
+          estimateTransferRelayed,
           getRelayNonce
         }
     else case relayerPrivateKey of
@@ -93,6 +100,8 @@ mkEnv = liftAff do
       Just prv -> pure {
           doMintRelayed: \msg -> mintRelayed' prv msg rnftTxOpts >>= eth_sendRawTransaction,
           doTransferRelayed: \xfer -> transferRelayed' prv xfer rnftTxOpts >>= eth_sendRawTransaction,
+          estimateMintRelayed,
+          estimateTransferRelayed,
           getRelayNonce
         }
   pure { chainID: web3Env.chainID, addresses: { fungibleToken: artifacts.ft, relayableNFT: artifacts.rnft, primaryAccount: web3Env.primaryAccount.addr }, provider, relayActions }

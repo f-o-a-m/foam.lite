@@ -7,6 +7,8 @@ module DApp.Relay
   , transferRelayed'
   , recoverRelayedMessageSignerWeb3
   , recoverRelayedTransferSignerWeb3
+  , estimateMintRelayed
+  , estimateTransferRelayed
   ) where
 
 import DApp.Relay.Types
