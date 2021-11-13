@@ -3,8 +3,8 @@ module Main where
 import Prelude
 
 import Chanterelle.Internal.Logging (LogLevel(..), log, setLogLevel)
+import DApp.Support (mkEnv)
 import Effect (Effect)
-import Lora.Env (mkEnv)
 import Data.Maybe (fromMaybe)
 import Node.Process (lookupEnv)
 import Data.Int (fromString)

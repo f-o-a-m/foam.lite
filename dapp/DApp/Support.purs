@@ -1,26 +1,35 @@
-module Lora.Env where
+module DApp.Support where
 
 import Prelude
 
 import Chanterelle.Internal.Artifact (_Deployed, _address, _network, readArtifact)
 import Data.Lens (_Just, (^?))
+import DApp.Relay (SignedRelayedMessage, SignedRelayedTransfer, mintRelayed, mintRelayed', transferRelayed, transferRelayed')
 import Effect.Aff (Aff, error, throwError)
-import Types (AppEnv)
 import Control.Alt ((<|>))
 import Effect.Class (liftEffect)
 import Data.Array (head)
 import Chanterelle.Internal.Utils (withExceptT')
-import DApp.Relay (mintRelayed, mintRelayed', transferRelayed, transferRelayed')
 import DApp.Util (makeTxOpts)
 import Contracts.RelayableNFT as RNFT
 import Data.Either (Either(..), either)
 import Node.Process (lookupEnv)
-import Network.Ethereum.Web3 (ChainCursor(..), httpProvider, mkHexString, runWeb3, unUIntN)
+import Network.Ethereum.Web3 (ChainCursor(..), HexString, Provider, Web3, httpProvider, mkHexString, runWeb3, unUIntN)
+import Network.Ethereum.Core.BigNumber (BigNumber, decimal, hexadecimal, parseBigNumber, unsafeToInt)
 import Network.Ethereum.Core.Signatures (Address, mkAddress, mkPrivateKey, privateToAddress)
 import Network.Ethereum.Web3.Api (eth_getAccounts, eth_sendRawTransaction, net_version)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
-import Network.Ethereum.Core.BigNumber (decimal, hexadecimal, parseBigNumber, unsafeToInt)
 import Chanterelle.Internal.Logging (LogLevel(..), log)
+
+type AppEnv = {
+  chainID :: BigNumber,
+  addresses :: { fungibleToken :: Address, relayableNFT :: Address, primaryAccount :: Address },
+  provider :: Provider,
+  relayActions :: { doMintRelayed :: SignedRelayedMessage -> Web3 HexString
+                  , doTransferRelayed :: SignedRelayedTransfer -> Web3 HexString
+                  , getRelayNonce :: Address -> Web3 BigNumber
+                  }
+}
 
 readArtifacts :: Int -> Aff { rnft :: Address, ft :: Address }
 readArtifacts networkID = do

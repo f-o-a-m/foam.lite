@@ -27,5 +27,5 @@ You can edit this file as you like.
   , "transformers"
   ]
 , packages = ./packages.dhall
-, sources = [ "lora/**/*.purs", "dapp/**/*.purs", "server/Types.purs" ]
+, sources = [ "lora/**/*.purs", "dapp/**/*.purs" ]
 }

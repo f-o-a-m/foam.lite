@@ -6,10 +6,10 @@ import Prelude
 
 import Data.Maybe (Maybe(..))
 import Data.Either (Either(..))
+import DApp.Support (AppEnv)
 import Chanterelle.Internal.Logging (LogLevel(..), log)
 import DApp.Relay.Types (DecodedMessage(..), decodePackedMessage)
 import Data.ByteString (ByteString, fromString, toString, Encoding(..), tail)
-import Types (AppEnv)
 import Network.Ethereum.Web3 (Web3Error, runWeb3)
 import Effect.Aff (Aff)
 import Network.Ethereum.Core.HexString (HexString, nullWord)
