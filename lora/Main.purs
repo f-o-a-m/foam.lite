@@ -2,13 +2,16 @@ module Main where
 
 import Prelude
 
-import Effect (Effect)
 import Chanterelle.Internal.Logging (LogLevel(..), log, setLogLevel)
+import Effect (Effect)
+import Lora.Env (mkEnv)
+import Data.Maybe (fromMaybe)
+import Node.Process (lookupEnv)
+import Data.Int (fromString)
 
+import Lora.FoamBridge (performPUSH_DATAAction)
 import Lora.UDP.Pkt as Pkt
 import Lora.UDP.Server as Server
-import Env (mkEnv)
-import Lora.FoamBridge
 
 handler :: Server.PktHandler
 handler respond pkt = case pkt of
@@ -33,7 +36,10 @@ handler respond pkt = case pkt of
 
 main :: Effect Unit
 main = do
+  addr <- fromMaybe "0.0.0.0" <$> lookupEnv "PACKET_RECEIVER_ADDRESS"
+  port <- fromMaybe 7000 <$> fromString <$> fromMaybe "" <$> lookupEnv "PACKET_RECEIVER_PORT"
+
   setLogLevel Debug
   log Info "🍝"
-  Server.start "0.0.0.0" 7000 handler
-  log Info "listening to UDP packets at 7000 port"
+  Server.start addr port handler
+  log Info $ "listening to UDP packets at " <> addr <> ":" <> (show port)

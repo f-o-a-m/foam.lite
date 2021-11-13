@@ -1,10 +1,10 @@
-module Env where
+module Lora.Env where
 
 import Prelude
 
 import Chanterelle.Internal.Artifact (_Deployed, _address, _network, readArtifact)
 import Data.Lens (_Just, (^?))
-import Effect.Aff (Aff, attempt, error, launchAff_, throwError)
+import Effect.Aff (Aff, error, throwError)
 import Types (AppEnv)
 import Control.Alt ((<|>))
 import Effect.Class (liftEffect)

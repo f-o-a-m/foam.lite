@@ -3,22 +3,16 @@ module Lora.UDP.Pkt
   LoraUDPPkt(..),
   GatewayMac(..),
   ProtocolToken(..),
-  PushDataJSON(..),
-  Base64Encoded(..),
-  ReceivedPacket(..),
-  DataRate(..),
   read,
   write,
-  parseLoraUDPPkt,
-  decodeBase64
+  parseLoraUDPPkt
   ) where
 
 import Prelude
 
 import Control.Alt ((<|>))
 import Control.Monad.Trans.Class (lift)
-import Data.Argonaut as A 
-import Data.Argonaut ((.:?))
+import Data.Argonaut as A
 import Data.ArrayBuffer.DataView (buffer, whole)
 import Data.ByteString as BS
 import Data.Either (Either(..), either, hush)
@@ -31,14 +25,13 @@ import Effect (Effect)
 import Node.Buffer (class MutableBuffer, Buffer, create, fromArray, readString, size, toArrayBuffer, writeString)
 import Node.Buffer as BufferMod
 import Node.Buffer.Internal as BufferInternal
-import Node.Buffer.Types (BufferValueType(UInt8, UInt16LE, Int16BE), Octet)
+import Node.Buffer.Types (BufferValueType(UInt8, Int16BE), Octet)
 import Node.Encoding (Encoding(ASCII))
 import Text.Parsing.Parser (fail, runParserT)
 import Text.Parsing.Parser.DataView (anyInt16be, satisfyInt8, takeN, takeRest)
 import Effect.Console (log)
-import Data.String.Base64 (decode)
-import Effect.Exception (Error)
-import Data.ArrayBuffer.Types (Uint8Array)
+
+import Lora.UDP.PushDataJSON (PushDataJSON(..))
 
 newtype ProtocolToken = ProtocolToken Int
 
@@ -66,60 +59,6 @@ readGatewayMac from to buff = do
 
 writeGatewayMac :: GatewayMac -> Int -> Buffer -> Effect Int
 writeGatewayMac (GatewayMac mac) ofs = BufferInternal.copy 0 8 mac ofs
-
--- ------------------------------------------------------
-
-newtype PushDataJSON = PushDataJSON { rxpk :: Maybe (Array ReceivedPacket) }
--- derive newtype instance decodeJsonPushDataJSON :: A.DecodeJson PushDataJSON
-instance decodeJsonPushDataJSON :: A.DecodeJson PushDataJSON where
-  decodeJson j  = do
-    obj <- A.decodeJson j
-    rxpk <- obj .:? "rxpk"
-    pure $ PushDataJSON { rxpk }
-
-derive newtype instance encodeJsonPushDataJSON :: A.EncodeJson PushDataJSON
-derive instance genericPushDataJSON :: Generic PushDataJSON _
-instance showPushDataJSON :: Show PushDataJSON where
-  show = genericShow
-
-newtype ReceivedPacket = ReceivedPacket
-  {
-    -- time :: String
-  -- , tmms :: Int
-  -- , tmst :: Int
-  -- , modu :: String
-  -- , datr :: DataRate
-   data :: Base64Encoded
-  }
-derive newtype instance decodeJsonReceivedPacket :: A.DecodeJson ReceivedPacket
-derive newtype instance encodeJsonReceivedPacket :: A.EncodeJson ReceivedPacket
-derive instance genericReceivedPacket :: Generic ReceivedPacket _
-instance showReceivedPacket :: Show ReceivedPacket where
-  show = genericShow
-
-newtype Base64Encoded = Base64Encoded String
-derive newtype instance decodeJsonBase64Encoded :: A.DecodeJson Base64Encoded
-derive newtype instance encodeJsonBase64Encoded :: A.EncodeJson Base64Encoded
-derive instance genericBase64Encoded :: Generic Base64Encoded _
-instance showBase64Encoded :: Show Base64Encoded where
-  show = genericShow
-
-decodeBase64 :: Base64Encoded -> Either Error String
-decodeBase64 (Base64Encoded a) = decode a
-
-data DataRate = LoraDataRate String
-              | FSK Int
-derive instance genericDataRate :: Generic DataRate _
-instance showDataRate :: Show DataRate where
-  show = genericShow
-instance decodeJsonDataRate :: A.DecodeJson DataRate where
-  decodeJson j = decodeLoraDataRate <|> decodeFSKRate <|> reportFailure
-    where decodeLoraDataRate = LoraDataRate <$> A.decodeJson j
-          decodeFSKRate = FSK <$> A.decodeJson j
-          reportFailure = Left $ A.TypeMismatch "Expected a String or an Int"
-instance encodeJsonDataRate :: A.EncodeJson DataRate where
-  encodeJson (LoraDataRate s) = A.encodeJson s
-  encodeJson (FSK i) = A.encodeJson i
 
 data LoraUDPPkt
     = PUSH_DATA
