@@ -3,23 +3,24 @@ module DApp.Support where
 import Prelude
 
 import Chanterelle.Internal.Artifact (_Deployed, _address, _network, readArtifact)
-import Data.Lens (_Just, (^?))
-import DApp.Relay (SignedRelayedMessage, SignedRelayedTransfer, mintRelayed, mintRelayed', transferRelayed, transferRelayed')
-import Effect.Aff (Aff, error, throwError)
-import Control.Alt ((<|>))
-import Effect.Class (liftEffect)
-import Data.Array (head)
+import Chanterelle.Internal.Logging (LogLevel(..), log)
 import Chanterelle.Internal.Utils (withExceptT')
-import DApp.Util (makeTxOpts)
 import Contracts.RelayableNFT as RNFT
+import Control.Alt ((<|>))
+import DApp.Relay (SignedRelayedMessage, SignedRelayedTransfer, mintRelayed, mintRelayed', transferRelayed, transferRelayed')
+import DApp.Util (makeTxOpts)
+import Data.Array (head)
 import Data.Either (Either(..), either)
-import Node.Process (lookupEnv)
-import Network.Ethereum.Web3 (ChainCursor(..), HexString, Provider, Web3, httpProvider, mkHexString, runWeb3, unUIntN)
+import Data.Lens (_Just, (^?))
+import Data.Maybe (Maybe(..), fromMaybe, maybe)
+import Effect.Aff (error, throwError)
+import Effect.Aff.Class (class MonadAff, liftAff)
+import Effect.Class (liftEffect)
 import Network.Ethereum.Core.BigNumber (BigNumber, decimal, hexadecimal, parseBigNumber, unsafeToInt)
 import Network.Ethereum.Core.Signatures (Address, mkAddress, mkPrivateKey, privateToAddress)
+import Network.Ethereum.Web3 (ChainCursor(..), HexString, Provider, Web3, httpProvider, mkHexString, runWeb3, unUIntN)
 import Network.Ethereum.Web3.Api (eth_getAccounts, eth_sendRawTransaction, net_version)
-import Data.Maybe (Maybe(..), fromMaybe, maybe)
-import Chanterelle.Internal.Logging (LogLevel(..), log)
+import Node.Process (lookupEnv)
 
 type AppEnv = {
   chainID :: BigNumber,
@@ -31,8 +32,8 @@ type AppEnv = {
                   }
 }
 
-readArtifacts :: Int -> Aff { rnft :: Address, ft :: Address }
-readArtifacts networkID = do
+readArtifacts :: forall m. MonadAff m => Int -> m { rnft :: Address, ft :: Address }
+readArtifacts networkID = liftAff do
   rnftPath <- liftEffect $ fromMaybe "build/RelayableNFT.json" <$> lookupEnv "RELAYABLENFT_ARTIFACT"
   ftPath <- liftEffect $ fromMaybe "build/FungibleToken.json" <$> lookupEnv "FUNGIBLETOKEN_ARTIFACT"
   withExceptT' error do
@@ -50,8 +51,8 @@ readArtifacts networkID = do
     log Info $ "Using FungibleToken address: " <> show ft
     pure { rnft, ft }
 
-mkEnv :: Aff AppEnv
-mkEnv = do
+mkEnv :: forall m. MonadAff m => m AppEnv
+mkEnv = liftAff do
   nodeUrl <- liftEffect $ fromMaybe "http://localhost:8545" <$> lookupEnv "NODE_URL"
   provider <- liftEffect $ httpProvider nodeUrl
   relayerPrivateKeyEnv <- liftEffect $ lookupEnv "RELAYER_PRIVATE_KEY"
