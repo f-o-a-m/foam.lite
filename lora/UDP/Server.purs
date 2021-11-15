@@ -27,8 +27,8 @@ start addr port handler = do
 
 msgHandler :: forall m. MonadAff m => MonadEffect m => Socket -> (PktHandler) -> Buffer -> SocketInfo -> m Unit
 msgHandler socket handler buff socketInfo = do
-  log Info ""
-  log Info $ "received UDP packet from " <> socketInfo.address <> ":" <> (toStringAs decimal socketInfo.port)
+  log Debug ""
+  log Debug $ "received UDP packet from " <> socketInfo.address <> ":" <> (toStringAs decimal socketInfo.port)
   liftEffect $ (show <$> toString ASCII buff) >>= log Info
   maybePkt <- liftEffect $ Pkt.read buff
   case maybePkt of
@@ -37,9 +37,10 @@ msgHandler socket handler buff socketInfo = do
     _ -> do
       log Error "unrecognized packet"
       liftEffect $ (show <$> toString ASCII buff) >>= log Error
+      log Error =<< (liftEffect $ (show <$> toString ASCII buff))
 
 responder :: forall m. MonadEffect m => Socket -> String -> Int -> Pkt.LoraUDPPkt -> m Unit
 responder socket addr port pkt = liftEffect $ do
-  log Info "sending pkt"
+  log Debug "sending packet"
   buff <- Pkt.write pkt
-  send socket buff Nothing Nothing port addr (Just $ log Info "sent")
+  send socket buff Nothing Nothing port addr (Just $ log Debug "sent")

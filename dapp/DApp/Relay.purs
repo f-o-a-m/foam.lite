@@ -9,13 +9,15 @@ module DApp.Relay
   , recoverRelayedTransferSignerWeb3
   , estimateMintRelayed
   , estimateTransferRelayed
+  , callMintRelayed
+  , callTransferRelayed
   ) where
 
 import DApp.Relay.Types
 import Prelude (($))
 
 import Contracts.RelayableNFT as RNFT
-import DApp.Util (estimateABIFn', makeTxOpts, signABIFn', widenUIntN128, widenUIntN32)
+import DApp.Util (estimateABIFn', callABIFn', makeTxOpts, signABIFn', widenUIntN128, widenUIntN32)
 import Data.Either (Either)
 import Network.Ethereum.Core.Signatures (PrivateKey)
 import Network.Ethereum.Web3 (Address, BigNumber, CallError, ChainCursor, HexString, TransactionOptions, UIntN, Web3)
@@ -62,4 +64,14 @@ estimateMintRelayed relayerAddress  (SignedRelayedMessage s) txOpts =
 estimateTransferRelayed :: Address -> SignedRelayedTransfer -> TransactionOptions NoPay -> Web3 BigNumber
 estimateTransferRelayed relayerAddress (SignedRelayedTransfer s) txOpts =
   estimateABIFn' (Proxy :: Proxy RNFT.TransferRelayedFn) relayerAddress txOpts $
+    { signature: packSignature s.signature, feeAmount: (widenUIntN128 s.feeAmount), nonce: s.nonce, tokenID: (widenUIntN32 s.tokenID), destination: s.destination }
+
+callMintRelayed :: Address -> SignedRelayedMessage -> TransactionOptions NoPay -> Web3 HexString
+callMintRelayed relayerAddress  (SignedRelayedMessage s) txOpts =
+  callABIFn' (Proxy :: Proxy RNFT.MintRelayedFn) relayerAddress txOpts $
+    { signature: packSignature s.signature, feeAmount: (widenUIntN128 s.feeAmount), nonce: s.nonce, tokenData: s.tokenData }
+
+callTransferRelayed :: Address -> SignedRelayedTransfer -> TransactionOptions NoPay -> Web3 HexString
+callTransferRelayed relayerAddress (SignedRelayedTransfer s) txOpts =
+  callABIFn' (Proxy :: Proxy RNFT.TransferRelayedFn) relayerAddress txOpts $
     { signature: packSignature s.signature, feeAmount: (widenUIntN128 s.feeAmount), nonce: s.nonce, tokenID: (widenUIntN32 s.tokenID), destination: s.destination }

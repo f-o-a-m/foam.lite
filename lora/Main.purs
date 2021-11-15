@@ -20,9 +20,9 @@ handler respond pkt = case pkt of
     log Info $ show token
     log Info $ show mac
     log Info $ show json
+    respond (Pkt.PUSH_ACK { token })
     env <- mkEnv
     performPUSH_DATAAction env json
-    respond (Pkt.PUSH_ACK { token })
   Pkt.PUSH_ACK { token } -> do
     log Info "PUSH_ACK"
     log Info $ show token
