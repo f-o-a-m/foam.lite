@@ -3,25 +3,26 @@ module Main where
 import Prelude
 
 import Chanterelle.Internal.Logging (LogLevel(..), log, setLogLevel)
-import DApp.Support (mkEnv)
+import DApp.Support (mkEnv, AppEnv)
 import Effect (Effect)
 import Data.Maybe (fromMaybe)
 import Node.Process (lookupEnv)
 import Data.Int (fromString)
+import Effect.Aff (launchAff_)
+import Effect.Class (liftEffect)
 
 import Lora.FoamBridge (performPUSH_DATAAction)
 import Lora.UDP.Pkt as Pkt
 import Lora.UDP.Server as Server
 
-handler :: Server.PktHandler
-handler respond pkt = case pkt of
+handler :: AppEnv -> Server.PktHandler
+handler env respond pkt = case pkt of
   Pkt.PUSH_DATA { token, mac, json } -> do
     log Info "PUSH_DATA"
     log Info $ show token
     log Info $ show mac
     log Info $ show json
     respond (Pkt.PUSH_ACK { token })
-    env <- mkEnv
     performPUSH_DATAAction env json
   Pkt.PUSH_ACK { token } -> do
     log Info "PUSH_ACK"
@@ -35,13 +36,14 @@ handler respond pkt = case pkt of
     log Error "unimplemented packet"
 
 main :: Effect Unit
-main = do
-  addr <- fromMaybe "0.0.0.0" <$> lookupEnv "PACKET_RECEIVER_ADDRESS"
+main = launchAff_ do
+  env <- mkEnv
+  liftEffect $ setLogLevel Debug
+
+  addr <- fromMaybe "0.0.0.0" <$> (liftEffect $ lookupEnv "PACKET_RECEIVER_ADDRESS")
   port <- fromMaybe 7000 <$> do
-    maybePort <- lookupEnv "PACKET_RECEIVER_PORT"
+    maybePort <- liftEffect $ lookupEnv "PACKET_RECEIVER_PORT"
     pure $ fromString =<< maybePort
 
-  setLogLevel Debug
-  log Info "🍝"
-  Server.start addr port handler
+  liftEffect $ Server.start addr port (handler env)
   log Info $ "listening to UDP packets at " <> addr <> ":" <> (show port)
