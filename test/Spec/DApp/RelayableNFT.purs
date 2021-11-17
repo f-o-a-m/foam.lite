@@ -1,5 +1,5 @@
 module Spec.DApp.RelayableNFT where
-  
+
 import Prelude
 
 import Chanterelle.Internal.Utils (pollTransactionReceipt)
@@ -10,15 +10,18 @@ import DApp.Relay (UnsignedRelayedMessage(..), UnsignedRelayedTransfer(..), getR
 import DApp.Util (makeTxOpts)
 import Data.Array ((!!))
 import Data.ByteString (toUTF8) as BS
+import Data.Either (Either(..))
 import Data.Maybe (fromJust)
 import Effect.Aff (forkAff, joinFiber)
-import Network.Ethereum.Web3 (ChainCursor(..), TransactionReceipt(..), TransactionStatus(..), embed, eventFilter, runWeb3)
+import Network.Ethereum.Web3 (ChainCursor(..), TransactionReceipt(..), TransactionStatus(..), Web3Error(..), embed, eventFilter, runWeb3)
 import Network.Ethereum.Web3.Api (eth_sendRawTransaction)
+import Network.Ethereum.Web3.Types (RpcError(..))
 import Partial.Unsafe (unsafePartial)
 import Spec.DApp.Common (SpecConfig)
 import Spec.Helpers (awaitEvent, expectRight', expectRight'', forceUIntN, resizeUIntN, zeroAddress)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
+import Test.Spec.Assertions.String (shouldContain)
 import Type.Proxy (Proxy(..))
 
 relayableNFTSpec :: SpecConfig DeployResults -> Spec Unit
@@ -53,8 +56,14 @@ relayableNFTSpec { provider, primaryAccount, secondaryAccounts, fungibleToken, r
     txh' <- expectRight' =<< (runWeb3 provider $ RNFT.burn txOpts { tokenId })
     TransactionReceipt txr' <- pollTransactionReceipt txh' provider
     txr'.status `shouldEqual` Succeeded
-    ownerOfToken <- expectRight'' =<< (runWeb3 provider $ RNFT.ownerOf txOpts Latest { tokenId })
-    ownerOfToken `shouldEqual` zeroAddress
+    eOwnerOf <- (runWeb3 provider $ RNFT.ownerOf txOpts Latest { tokenId })
+    -- depending on version of ethereum client, openzeppelin, etc., we might either get a revert with
+    -- a helpful message, or the zero address
+    case eOwnerOf of
+      Left (Rpc (RpcError err)) -> err.message `shouldContain` "nonexistent token"
+      other -> do
+        ownerOfToken <- expectRight'' other
+        ownerOfToken `shouldEqual` zeroAddress
 
   it "can be minted for someone else via mintFor" do
     let secondaryAccount = unsafePartial fromJust $ secondaryAccounts !! 0
@@ -65,7 +74,7 @@ relayableNFTSpec { provider, primaryAccount, secondaryAccounts, fungibleToken, r
     tokenId <- joinFiber fEv
     ownerOfToken <- expectRight'' =<< (runWeb3 provider $ RNFT.ownerOf txOpts Latest { tokenId })
     ownerOfToken `shouldEqual` secondaryAccount
-  
+
   it "can be minted for someone else via mintRelayed" do
     let secondaryAccount = unsafePartial fromJust $ secondaryAccounts !! 1
         password = accountPassword secondaryAccount
@@ -215,7 +224,11 @@ relayableNFTSpec { provider, primaryAccount, secondaryAccounts, fungibleToken, r
       transferRelayed signedMessage txOpts
     TransactionReceipt txr' <- pollTransactionReceipt txh' provider
     txr'.status `shouldEqual` Succeeded
-    ownerOfToken <- expectRight'' =<< (runWeb3 provider $ RNFT.ownerOf txOpts Latest { tokenId: resizeUIntN tokenID })
-    ownerOfToken `shouldEqual` zeroAddress
-
-    
+    eOwnerOf <- (runWeb3 provider $ RNFT.ownerOf txOpts Latest { tokenId: resizeUIntN tokenID })
+    -- depending on version of ethereum client, openzeppelin, etc., we might either get a revert with
+    -- a helpful message, or the zero address
+    case eOwnerOf of
+      Left (Rpc (RpcError err)) -> err.message `shouldContain` "nonexistent token"
+      other -> do
+        ownerOfToken <- expectRight'' other
+        ownerOfToken `shouldEqual` zeroAddress
