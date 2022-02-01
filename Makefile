@@ -77,6 +77,8 @@ bundle: ## Bundle the app for distribution
 	mkdir -p dist/build
 	cp build/*.json dist/build
 	npm run bundle-app
+	npm run bundle-server
+	npm run bundle-lora
 	npm run webpack:prod
 	npm run backend-dist
 	mv dist foam.lite
