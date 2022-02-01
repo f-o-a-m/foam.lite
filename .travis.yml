@@ -22,12 +22,18 @@ script:
   - cp -v .deployed-contracts/*.json build/
   - make bundle
 deploy:
-  provider: pages
-  local-dir: ./dist/
-  email: deploy@travis-ci.com
-  name: Deployment Bot
-  skip-cleanup: true
-  github-token: $GITHUB_TOKEN
-  keep-history: true
-  on:
-    branch: main
+  - provider: pages
+    local-dir: ./dist/
+    email: deploy@travis-ci.com
+    name: Deployment Bot
+    skip-cleanup: true
+    github-token: $GITHUB_TOKEN
+    keep-history: true
+    on:
+      branch: main
+  - provider: releases
+    github-token: $GITHUB_TOKEN
+    file: "foam.lite.tgz"
+    skip_cleanup: true
+    on:
+      tags: true

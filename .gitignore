@@ -25,3 +25,4 @@ dist/*
 deployment/keys.txt
 foam5g.tgz
 package-lock.json
+foam.lite.tgz
