@@ -32,7 +32,7 @@ deploy:
     on:
       branch: main
   - provider: releases
-    github-token: $GITHUB_TOKEN
+    token: $GITHUB_TOKEN
     file: "foam.lite.tgz"
     skip_cleanup: true
     on:
