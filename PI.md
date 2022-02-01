@@ -48,6 +48,7 @@ In your desktop, install node 14, purescript 0.13.8 and spago.
 
 Clone https://github.com/f-o-a-m/foam.lite , run `npm i` and then run `npm run bundle-lora`.
 
+A faster alternative is to grab the latest [release](https://github.com/f-o-a-m/foam.lite/releases) which has been compiled and bundled on CI. 
 
 ### Install Foam.lite gateway into 
 
@@ -64,7 +65,13 @@ $ nvm install 14
 $ nvm use 14
 ```
 
-Copy the whole project where you compiled Foam.lite on your desktop machine to the Pi. For example using `rsync -av` over ssh
+Copy the whole project where you compiled Foam.lite on your desktop machine to the Pi. For example using `rsync -av` over ssh. Alternatively clone `foam.lite` on the PI and run
+
+```
+$ npm install --production
+```
+
+If you grabbed the binaries from releases, you can just copy `/dist` and `/build` from the `.tgz` file into `foam.lite`.
 
 ## Running Foam.lite manually
 
