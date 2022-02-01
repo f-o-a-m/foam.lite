@@ -1,5 +1,5 @@
 module DApp.Util where
-  
+
 import Prelude
 
 import Contracts.FungibleToken as FT
@@ -8,7 +8,7 @@ import Data.Functor.Tagged (Tagged)
 import Data.Generic.Rep (class Generic, Constructor)
 import Data.Generic.Rep.Show (genericShow)
 import Data.Int as Int
-import Data.Lens ((?~), (.~))
+import Data.Lens ((^.), (?~), (.~))
 import Data.Maybe (Maybe(..), fromJust, fromMaybe, maybe)
 import Data.Symbol (class IsSymbol, SProxy)
 import Effect.Exception (error)
@@ -16,23 +16,23 @@ import Network.Ethereum.Core.HexString (fromByteString, mkHexString, toByteStrin
 import Network.Ethereum.Core.Keccak256 (keccak256)
 import Network.Ethereum.Core.RLP as RLP
 import Network.Ethereum.Core.Signatures (Address, ChainId(..), PrivateKey, Signature(..), addChainIdOffset, privateToAddress, signMessage)
-import Network.Ethereum.Web3 (BigNumber, ChainCursor(..), Ether, HexString, TransactionOptions(..), UIntN, Value, Web3, _data, _from, _gas, _gasPrice, _nonce, _to, _value, convert, defaultTransactionOptions, embed, mkDataField, toMinorUnit, uIntNFromBigNumber, unUIntN)
+import Network.Ethereum.Web3 (BigNumber, Ether, HexString, TransactionOptions(..), UIntN, Value, Web3, _data, _from, _gas, _gasPrice, _nonce, _to, _value, convert, defaultTransactionOptions, embed, mkDataField, toMinorUnit, uIntNFromBigNumber, unUIntN)
 import Network.Ethereum.Web3 as BS
-import Network.Ethereum.Web3.Api (eth_estimateGas, eth_gasPrice, eth_getTransactionCount, net_version)
+import Network.Ethereum.Web3.Api (eth_estimateGas, eth_call, eth_gasPrice, eth_getTransactionCount, net_version)
 import Network.Ethereum.Web3.Solidity (class GenericABIEncode, class RecordFieldsIso)
 import Network.Ethereum.Web3.Solidity.Sizes (S128, S256, S32, s256)
-import Network.Ethereum.Web3.Types (ETHER)
+import Network.Ethereum.Web3.Types (ETHER, ChainCursor(..))
 import Network.Ethereum.Web3.Types.TokenUnit (class TokenUnitSpec, MinorUnit, NoPay)
 import Partial.Unsafe (unsafePartialBecause)
 import Type.Proxy (Proxy(..))
-  
+
 makeTxOpts :: { from :: Address, to :: Address } -> TransactionOptions NoPay
 makeTxOpts { from, to } = defaultTransactionOptions
   # _from ?~ from
   # _to ?~ to
 
 makePayEthTx :: { from :: Address, to :: Address, value :: Value Ether } -> TransactionOptions MinorUnit
-makePayEthTx { from, to, value } = 
+makePayEthTx { from, to, value } =
   TransactionOptions { from: Just from
                      , to: Just to
                      , value: Just $ convert value
@@ -179,6 +179,38 @@ signABIFn' :: forall selector a name args fields l tokenUnit
            -> Record fields
            -> Web3 HexString
 signABIFn' proxy pk txo args = signTransaction' pk (txo # _data ?~ (mkDataField proxy args))
+
+estimateABIFn':: forall selector a name args fields l tokenUnit
+            . IsSymbol selector
+           => Generic a (Constructor name args)
+           => GenericABIEncode (Constructor name args)
+           => RecordFieldsIso args fields l
+           => TokenUnitSpec (tokenUnit ETHER)
+           => Proxy (Tagged (SProxy selector) a)
+           -> Address
+           -> TransactionOptions tokenUnit
+           -> Record fields
+           -> Web3 BigNumber
+estimateABIFn' proxy addr txo args = eth_estimateGas txo'
+  where txo' = txo # _from ?~ addr
+                   # _data ?~ (mkDataField proxy args)
+                   # _value .~ (convert <$> txo ^. _value)
+
+callABIFn':: forall selector a name args fields l tokenUnit
+            . IsSymbol selector
+           => Generic a (Constructor name args)
+           => GenericABIEncode (Constructor name args)
+           => RecordFieldsIso args fields l
+           => TokenUnitSpec (tokenUnit ETHER)
+           => Proxy (Tagged (SProxy selector) a)
+           -> Address
+           -> TransactionOptions tokenUnit
+           -> Record fields
+           -> Web3 HexString
+callABIFn' proxy addr txo args = eth_call txo' Latest
+  where txo' = txo # _from ?~ addr
+                   # _data ?~ (mkDataField proxy args)
+                   # _value .~ (convert <$> txo ^. _value)
 
 signApprovalTx :: PrivateKey -> ChainId -> TransactionOptions NoPay -> { amount :: UIntN S256, spender :: Address } -> HexString
 signApprovalTx = signABIFn (Proxy :: Proxy FT.ApproveFn)
