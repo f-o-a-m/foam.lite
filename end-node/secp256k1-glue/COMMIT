@@ -1,0 +1,3 @@
+Adapted from https://github.com/diybitcoinhardware/secp256k1-embedded at commit 036f4656335fcbce978d38a7d1ea369c6d39d051
+to work with the LTSP build system.
+

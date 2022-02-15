@@ -4,6 +4,10 @@
 
 Deployed [here](https://f-o-a-m.github.io/foam.lite/)
 
+## Latest Documentation
+
+The latest documentation can be found on the [FOAM Developer Portal](https://f-o-a-m.github.io/foam.developer/foamlite/introduction.html).
+
 ## General Caveats
 Due to weirdness with certain versions of Node and Spago, you'd ideally want to use the `v10.x` train of Node.
 With nvm, this is `nvm install lts/dubnium && nvm use lts/dubnium`

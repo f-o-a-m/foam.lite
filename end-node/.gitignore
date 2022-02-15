@@ -1,0 +1,11 @@
+BUILD/
+.vscode/
+.DS_Store
+Thumbs.db
+__pycache__/
+
+.cproject
+.project
+.settings/
+.temp/
+*.launch

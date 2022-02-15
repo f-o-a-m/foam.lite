@@ -1,0 +1,3 @@
+Adapted from `master` of https://github.com/trezor/trezor-firmware at commit 4e0d813269a5c527b15b33c6adb6ecb476916165
+
+Added a `#define USE_KECCAK 1` in `sha3.c`, since we want Keccak instead of SHA3 params for Ethereum...
