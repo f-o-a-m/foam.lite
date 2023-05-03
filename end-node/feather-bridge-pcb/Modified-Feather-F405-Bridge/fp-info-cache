@@ -1,0 +1,85 @@
+20150955896843
+Footprints
+C_Rect_L4.0mm_W2.5mm_P2.50mm
+C, Rect series, Radial, pin pitch=2.50mm, , length*width=4*2.5mm^2, Capacitor
+C Rect series Radial pin pitch 2.50mm  length 4mm width 2.5mm Capacitor
+0
+2
+2
+Footprints
+FOAM.lite
+
+
+0
+0
+0
+Footprints
+Feather_16x12
+
+
+0
+30
+28
+Footprints
+NUD3112LT1
+
+
+0
+3
+3
+Footprints
+PinHeader_1x06_P2.54mm_Vertical
+Through hole straight pin header, 1x06, 2.54mm pitch, single row
+Through hole pin header THT 1x06 2.54mm single row
+0
+6
+6
+Footprints
+PinSocket_2x06_P2.54mm_Vertical_No_Index
+Through hole straight socket strip, 2x06, 2.54mm pitch, double cols (from Kicad 4.0.7), script generated
+Through hole socket strip THT 2x06 2.54mm double row
+0
+12
+12
+Footprints
+R_Box_L8.4mm_W2.5mm_P5.08mm
+Resistor, Box series, Radial, pin pitch=5.08mm, 0.5W = 1/2W, length*width=8.38*2.54mm^2, http://www.vishay.com/docs/60051/cns020.pdf
+Resistor Box series Radial pin pitch 5.08mm 0.5W = 1/2W length 8.38mm width 2.54mm
+0
+2
+2
+Footprints
+Radio_FeatherWing_16x12+5+3
+
+
+0
+38
+36
+Footprints
+SW_PUSH_6mm_THT
+https://www.omron.com/ecb/products/pdf/en-b3f.pdf
+tact sw push 6mm
+0
+4
+2
+Footprints
+SolderJumper-2_P1.3mm_Open_TrianglePad1.0x1.5mm
+SMD Solder Jumper, 1x1.5mm Triangular Pads, 0.3mm gap, open
+solder jumper open
+0
+2
+2
+Footprints
+SolderJumper-3_P2.0mm_Open_TrianglePad1.0x1.5mm
+SMD Solder Jumper, 1x1.5mm Triangular Pads, 0.3mm gap, open
+solder jumper open
+0
+5
+3
+footprints
+NUD3112LT1
+
+
+0
+3
+3
