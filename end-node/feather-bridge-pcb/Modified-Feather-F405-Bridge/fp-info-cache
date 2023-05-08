@@ -1,4 +1,4 @@
-21696103756949398
+21702838019020916
 Audio_Module
 Reverb_BTDR-1H
 Digital Reverberation Unit, http://www.belton.co.kr/inc/downfile.php?seq=17&file=pdf (footprint from http://www.uk-electronic.de/PDF/BTDR-1.pdf)
@@ -53599,12 +53599,26 @@ emi filter
 5
 5
 Footprints
+C_Disc_D3.0mm_W1.6mm_P2.50mm
+C, Disc series, Radial, pin pitch=2.50mm, , diameter*width=3.0*1.6mm^2, Capacitor, http://www.vishay.com/docs/45233/krseries.pdf
+C Disc series Radial pin pitch 2.50mm  diameter 3.0mm width 1.6mm Capacitor
+0
+2
+2
+Footprints
 C_Rect_L4.0mm_W2.5mm_P2.50mm
 C, Rect series, Radial, pin pitch=2.50mm, , length*width=4*2.5mm^2, Capacitor
 C Rect series Radial pin pitch 2.50mm  length 4mm width 2.5mm Capacitor
 0
 2
 2
+Footprints
+FOAM-Logo-Cubes
+
+
+0
+0
+0
 Footprints
 FOAM.lite
 
@@ -53619,6 +53633,13 @@ Feather_16x12
 0
 30
 28
+Footprints
+PinHeader_1x02_P2.54mm_Horizontal
+Through hole angled pin header, 1x02, 2.54mm pitch, 6mm pin length, single row
+Through hole angled pin header THT 1x02 2.54mm single row
+0
+2
+2
 Footprints
 PinHeader_1x06_P2.54mm_Vertical
 Through hole straight pin header, 1x06, 2.54mm pitch, single row
@@ -53640,6 +53661,13 @@ RE1C002UNTCL
 0
 3
 3
+Footprints
+R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal
+Resistor, Axial_DIN0207 series, Axial, Horizontal, pin pitch=10.16mm, 0.25W = 1/4W, length*diameter=6.3*2.5mm^2, http://cdn-reichelt.de/documents/datenblatt/B400/1_4W%23YAG.pdf
+Resistor Axial_DIN0207 series Axial Horizontal pin pitch 10.16mm 0.25W = 1/4W length 6.3mm diameter 2.5mm
+0
+2
+2
 Footprints
 R_Box_L8.4mm_W2.5mm_P5.08mm
 Resistor, Box series, Radial, pin pitch=5.08mm, 0.5W = 1/2W, length*width=8.38*2.54mm^2, http://www.vishay.com/docs/60051/cns020.pdf
