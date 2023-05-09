@@ -1,0 +1,10 @@
+Designator,Footprint,Quantity,Value,LCSC Part #
+C1,C_Disc_D3.0mm_W1.6mm_P2.50mm,1,0.1uF,
+J1,PinHeader_1x06_P2.54mm_Vertical,1,Conn_01x06,
+J3,PinSocket_2x06_P2.54mm_Vertical_No_Index,1,Conn_02x06_Odd_Even,
+J4,PinHeader_1x02_P2.54mm_Horizontal,1,~,
+"R1, R2, R3",R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal,3,10k,
+"SW1, SW2",SW_PUSH_6mm_THT,2,SW_SPST,
+U1,Radio_FeatherWing_16x12+5+3,1,LoRa Radio FeatherWing,
+"U2, U3",SOT-23,2,NUD3112LT1,
+U4,Bluefruit-SPI-Friend,1,~,
