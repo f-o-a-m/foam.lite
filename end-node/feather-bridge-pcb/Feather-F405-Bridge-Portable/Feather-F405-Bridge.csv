@@ -1,0 +1,36 @@
+"#","Reference","Qty","Value","Description","Manufacturer","Manufacturer Pdt No.","Supplier","Supplier Pdt No.","Unit Price","Ext. Price","DNP","Note"
+"1","C1","1","0.1uF","0.1 µF ±10% 50V Ceramic Capacitor X7R Radial","Murata Electronics","RCER71H104K0A2H03B","DigiKey","490-11885-ND","$0.47",$0.47,,
+"2","J1","1","Conn_01x06","Connector Header Through Hole 6 position 0.100"" (2.54mm) 1Row","Amphenol ICC (FCI)","78511-406HLF","DigiKey","609-78511-406HLF-ND","$0.61",$0.61,,
+"3","J2","1","Conn_02x02_Odd_Even","Connector Header Through Hole 4 position 0.100"" (2.54mm) 2 Row","TE Connectivity AMP Connectors","5-146256-2","Mouser","571-5-146256-2","$0.49",$0.49,,
+"4","J3","2","Conn_01x03","Connector Header Through Hole 3 position 0.100"" (2.54mm) 1Row","Molex",705430037,"DigiKey","WM4825-ND","$1.09",$2.18,,
+"5","J4","1","Conn_01x07","Connector Header Through Hole 7 position 0.100"" (2.54mm) 1Row","Harwin","M20-9770746","Mouser","855-M20-9770746","$0.35",$0.35,,
+"6","R1","1","10k ohms","10 kOhms ±1% 0.125W, 1/8W Through Hole Resistor Metal Film","Vishay Dale","RN55C1002FB14","DigiKey","1135-1471-ND","$0.62",$0.62,,
+"7","SW1","1","B3F-3152","Tactile Switches R/A 6X6 6.15mm Button","Omron Electronics","B3F-3152","Mouser","653-B3F-3152","$0.45",$0.45,,
+"8","SW2, SW3","2","TL1105MF160Q","Tactile Switch SPST-NO Side Actuated Through Hole, 
+Right Angle, Actuator length 6.85 mm","E-Switch","TL1105MF160Q","Mouser","612-TL1105M","$0.43",$0.86,,
+"9","SW4","1","ELUMEETHQ7C22","Pushbutton Switch SPDTON-ON","C&K","ELUMEETHQ7C22","Mouser","611-ELUMEETHQ7C22","$10.53",$10.53,,
+"10","CAP1",1,"CAP TACTILE ROUND IVORY","Round Tactile Switch Cap Ivory Slip On","Omron Electronics","B32-2000","DigiKey","Z6127-ND","$0.95",$0.95,,
+"11","CAP2",1,"CAP PUSHBUTTON ROUND BLACK","Round, Convex (Domed) Pushbutton Switch Cap Black Snap Fit","C&K","957C00000","Mouser","611-957C00000","$0.67",$0.67,,
+"12","J5",1,"315-43-116-41-001000","16 Position Receptacle Connector 0.100"" (2.54mm) Through Hole Gold","Mill-Max Manufacturing Corp.","315-43-116-41-001000","DigiKey","ED4564-16-ND","$2.59",$2.59,,
+"13","J6",1,"315-43-105-41-001000","5 Position Receptacle Connector 0.100"" (2.54mm) Through Hole Gold","Mill-Max Manufacturing Corp.","315-43-105-41-001000","DigiKey","ED4564-05-ND","$0.87",$0.87,,
+"14","J7",1,"315-43-103-41-001000","3 Position Receptacle Connector 0.100"" (2.54mm) Through Hole Gold","Mill-Max Manufacturing Corp.","315-43-103-41-001000","DigiKey","ED4564-03-ND","$0.58",$0.58,,
+"15","J8",1,"315-43-112-41-003000","12 Position Receptacle Connector 0.100"" (2.54mm) Through Hole Gold","Mill-Max Manufacturing Corp.","315-43-112-41-003000","DigiKey","ED4764-12-ND","$1.79",$1.79,,
+"16","PCBA1","1","LoRa Radio FeatherWing","RFM95W LoRa RF Feather Platform Evaluation Expansion Board 900MHz","Adafruit Industries LLC",3231,"Mouser","485-3231","$19.95",$19.95,,
+"17","PCBA2",1,"Feather Express STM32F405","STM32F405 Feather STM32F405 Express STM32F4 ARM® Cortex®-M4 
+MCU 32-Bit Embedded Evaluation Board","Adafruit Industries LLC",4382,"Mouser","485-4382","$39.95",$39.95,,
+"18","D1",1,"ADDRESS LED MODULE SERIAL RGB","Addressable Lighting Neopixel 4 LED Module Serial (Shift Register) 
+RGB 10.20mm L x 12.70mm W","Adafruit Industries LLC",1312,"Mouser","485-1312","$7.95",$7.95,,
+"19","BATT1",1,"BATT LI-ION POLY 3.7V 3AH 104060","104060 3.7 V Lithium-Ion Polymer Battery Rechargeable (Secondary) 3Ah","US Electronics Inc.","USE-104060-3K-PCBJST","DigiKey","3544-USE-104060-3K-PCBJST-ND","$14.95",$14.95,,"Stock unavailable"
+"20","CBL1",1,"CBL ASSY UMCC-SMA JK-PL 1.969""","Cable Assembly Coaxial U.FL (UMCC), 
+IPEX MHF1 to SMA 1.13mm OD Coaxial Cable 1.969"" (50.00mm)","Samtec Inc.","MH113-MH1RP-01BJ1-0050","DigiKey","SAM13053-ND","$14.59",$14.59,,"Needs to be tested"
+"21","CBL2",1,"SL POSITIVE LOCK R-R 3CKT 50MM S","3 Position Cable Assembly Rectangular Socket to Socket 0.164' (50.00mm, 1.97"")","Molex",2162701030,"Mouser","538-216270-1030","$3.15",$3.15,,
+22,"FST1",2,"Press-In Nut","18-8 Stainless Steel Press-Fit Nut, M2.5 x 0.45 mm Thread","McMaster-Carr","95117A488","McMaster-Carr","95117A488",$0.24,$0.48,,
+23,"FST2",2,"M2.5 Philips Screw","Passivated 18-8 Stainless Steel Pan Head Phillips Screws
+M2.5 x 0.45 mm Thread, 18 mm Long","McMaster-Carr","92000A206","McMaster-Carr","92000A206",$0.23,$0.46,,
+24,"FST3",2,"M2.5 Standoff","Uxcell M2.5x5mm+5mm Male-Female Brass Hex Standoff",,,"Amazon","a19111800ux0444",$0.14,$0.28,,
+25,"PCB1",1,"Bridge PCB","Custom Bridge PCB","JLCPCB","Y2-6980369A",,,$7.22,$7.22,,
+26,"MCH1",1,"Enclosure Base","Custom Enclosure base 3D printed using SLS technology","JLCPCB",,,,$4.31,$4.31,,
+27,"MCH2",1,"Enclosure Lid","Custom Enclosure lid 3D printed using SLS technology","JLCPCB",,,,$2.00,$2.00,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,"Total",$139.30,,
