@@ -53,7 +53,7 @@
     (scale (xyz 1 1 1))
     (rotate (xyz 0 0 0))
   )
-  (model "${KIPRJMOD}/3D_Assets/705430037.stp"
+  (model "${KIPRJMOD}/3D_Assets/705430037.stp" hide
     (offset (xyz 0 -2.5 8))
     (scale (xyz 1 1 1))
     (rotate (xyz 0 0 90))

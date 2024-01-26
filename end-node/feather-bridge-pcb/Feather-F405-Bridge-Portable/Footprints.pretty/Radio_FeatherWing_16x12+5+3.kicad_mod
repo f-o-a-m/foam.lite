@@ -76,24 +76,24 @@
   (pad "34" thru_hole circle (at 2.54 1.27) (size 1.7 1.7) (drill 1) (layers "*.Cu" "*.Mask") (tstamp 3be6fa8b-4cd3-49b8-b2a4-b7cecda8e378))
   (pad "35" thru_hole circle (at 0 1.27) (size 1.7 1.7) (drill 1) (layers "*.Cu" "*.Mask") (tstamp 1460f8f7-a6fd-40e9-b2a4-25c6c0494f42))
   (pad "36" thru_hole circle (at -2.54 1.27) (size 1.7 1.7) (drill 1) (layers "*.Cu" "*.Mask") (tstamp abe90fd2-f9a5-4d75-aa97-c328820298dd))
-  (model "${KIPRJMOD}/3D_Assets/mill-max-315-13-116-41-001000.STEP"
-    (offset (xyz -11.5 20 3))
+  (model "${KIPRJMOD}/3D_Assets/801-xx-016-10-012000.STEP"
+    (offset (xyz -10.2 19 2.5))
     (scale (xyz 1 1 1))
     (rotate (xyz -90 0 90))
   )
-  (model "${KIPRJMOD}/3D_Assets/mill-max-315-13-112-41-001000.STEP"
-    (offset (xyz 9 10 2.5))
-    (scale (xyz 1 1 1))
-    (rotate (xyz -90 0 90))
-  )
-  (model "${KIPRJMOD}/3D_Assets/mill-max-315-13-105-41-001000.STEP"
-    (offset (xyz -6 20 2.5))
+  (model "${KIPRJMOD}/3D_Assets/801-xx-005-10-012000.STEP"
+    (offset (xyz -5 21 2.5))
     (scale (xyz 1 1 1))
     (rotate (xyz -90 0 0))
   )
-  (model "${KIPRJMOD}/3D_Assets/mill-max-315-13-103-41-001000.STEP"
-    (offset (xyz -3.5 -2.5 2.5))
+  (model "${KIPRJMOD}/3D_Assets/801-xx-003-10-012000.STEP"
+    (offset (xyz -2.5 -1.4 2.5))
     (scale (xyz 1 1 1))
     (rotate (xyz -90 0 0))
+  )
+  (model "${KIPRJMOD}/3D_Assets/801-xx-012-10-012000.STEP"
+    (offset (xyz 10.15 -19 2.5))
+    (scale (xyz 1 1 1))
+    (rotate (xyz 90 -180 90))
   )
 )
