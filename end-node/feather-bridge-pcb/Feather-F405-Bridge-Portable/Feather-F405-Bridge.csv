@@ -1,0 +1,12 @@
+"Id";"Designator";"Footprint";"Quantity";"Designation";"Supplier and ref";
+1;"J3";"PinHeader_1x03_P2.54mm_Vertical";1;"Conn_01x03";;;
+2;"U1";"Radio_FeatherWing_16x12+5+3";1;"LoRa Radio FeatherWing";;;
+3;"J2";"PinHeader_2x02_P2.54mm_Vertical";1;"Conn_02x02_Odd_Even";;;
+4;"SW2,SW3";"SW_TL1105MF160Q";2;"TL1105MF160Q";;;
+5;"SW1";"SW_B3F-3150_OMR";1;"B3F-3152";;;
+6;"C1";"C_Disc_D3.0mm_W1.6mm_P2.50mm";1;"0.1uF";;;
+7;"SW4";"ELUMEETHQ7C22";1;"ELUMEETHQ7C22";;;
+8;"J1";"PinHeader_1x06_P2.54mm_Vertical";1;"Conn_01x06";;;
+9;"J4";"PinHeader_1x07_P2.54mm_Vertical";1;"Conn_01x07";;;
+10;"R1";"R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal";1;"10k";;;
+11;"REF**";"FOAM-Logo-Plus-Text";1;"FOAM-Logo-Plus-Text";;;
